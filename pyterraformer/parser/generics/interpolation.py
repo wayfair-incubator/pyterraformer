@@ -26,6 +26,8 @@ from analytics_terraformer_core.base_objects import TerraformWorkspace, Terrafor
 from analytics_terraformer_core.meta_classes import TerraformBlock
 
 
+
+
 @dataclass
 class UnresolvedLookup:
     base: Any
@@ -591,3 +593,57 @@ class Block(Resolvable):
         return f"""{{
         {out}
         }}"""
+
+
+
+class Symlink(Resolvable):
+    def __init__(self, value):
+        self.value = value
+
+    def __eq__(self, other):
+        return self.value.__eq__(other)
+
+    def __repr__(self):
+        return "".join([val.__repr__() for val in self.value])
+
+
+class LegacySplat(Resolvable):
+    def __init__(self, args):
+        self.contents = args
+
+    def __repr__(self):
+        return "{}".format(*[val.__repr__() for val in self.contents[:1]])
+
+    def resolve(self, workspace, file, parent=None, parent_instance=None):
+        # parent = None
+        parent_instance = self
+        resolve = deepcopy(self.contents)
+        while resolve:
+            next = resolve.pop(0)
+            parent = _resolver_function(next, workspace, file, parent, parent_instance)
+            parent_instance = next
+        if parent is None:
+            raise ValueError(f"No values for interpolation {self.contents}")
+        return parent
+
+
+class ToSet(Resolvable):
+    def __init__(self, items):
+        self.items = items
+
+    def __repr__(self):
+        return "toset({})".format(",".join([item.__repr__() for item in self.items]))
+
+    def resolve(self, workspace, file, parent=None, parent_instance=None):
+        final = []
+        for item in self.items:
+            if isinstance(parent_instance, PropertyLookup):
+                resolved = PropertyLookup(parent_instance, item).resolve(
+                    workspace, file, parent, parent_instance
+                )
+                out = resolved
+            else:
+                out = item
+            final.append(out)
+        concat = ",".join(final)
+        return f"toset({concat})"

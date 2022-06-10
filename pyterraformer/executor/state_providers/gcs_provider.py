@@ -5,3 +5,4 @@ from pyterraformer.executor.state_providers.base_provider import BaseStateProvid
 class GCSStateProvider(BaseStateProvider):
 
     def __init__(self, bucket:str, ):
+        pass

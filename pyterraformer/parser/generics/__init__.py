@@ -22,6 +22,9 @@ from .interpolation import (
     Types,
     ArrayLookup,
     GenericFunction,
+Symlink,
+LegacySplat,
+ToSet
 )
 from .local import Local
 from .meta_arguments import DependsOn, Provider, ForEach, Count, Lifecycle
