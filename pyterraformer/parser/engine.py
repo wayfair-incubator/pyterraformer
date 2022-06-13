@@ -208,7 +208,7 @@ class ParseToObjects(Transformer):
         self.text = text
 
     def meta_to_text(self, meta):
-        return self.text[meta.start_pos: meta.end_pos]
+        return self.text[meta.start_pos : meta.end_pos]
 
     def IDENTIFIER(self, args):
         return String(args.value)
@@ -399,4 +399,6 @@ def parse_text(text, print_flag: bool = False):
                     print(item)
             else:
                 print(row)
-    return ParseToObjects(visit_tokens=True, text=text).transform(TERRAFORM_PARSER.parse(text))
+    return ParseToObjects(visit_tokens=True, text=text).transform(
+        TERRAFORM_PARSER.parse(text)
+    )

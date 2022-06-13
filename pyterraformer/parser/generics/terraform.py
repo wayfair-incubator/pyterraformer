@@ -1,6 +1,6 @@
 from analytics_terraformer_core.base_objects import (
     TerraformObject,
-    TerraformBlock,
+    Block,
     Literal,
     process_attribute,
 )
@@ -14,13 +14,16 @@ class TerraformConfig(TerraformObject):
         attributes = attributes or []
         self.backends = [obj for obj in attributes if isinstance(obj, Backend)]
         TerraformObject.__init__(
-            self, "terraform", text, [obj for obj in attributes if not isinstance(obj, Backend)]
+            self,
+            "terraform",
+            text,
+            [obj for obj in attributes if not isinstance(obj, Backend)],
         )
 
     def render(self, variables=None):
         output = {
             "required_version": self.required_version,
-            "backend": TerraformBlock([Literal(backend.render()) for backend in self.backends]),
+            "backend": Block([Literal(backend.render()) for backend in self.backends]),
         }
         final = process_attribute(output)
         return self.template.render(render_attributes=final)

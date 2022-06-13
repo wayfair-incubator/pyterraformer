@@ -68,7 +68,9 @@ class BaseModule(TerraformObject):
                 final[key] = item.render_basic()
         final = clean_render_dictionary(final, [])
         processed = process_attribute(final)
-        return self.template.render(render_attributes=processed, name=self._name, **variables)
+        return self.template.render(
+            render_attributes=processed, name=self._name, **variables
+        )
 
     def interpolation_property(self, property: str):
         from analytics_terraformer_core.base_objects import Literal

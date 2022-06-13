@@ -6,10 +6,12 @@ from pyterraformer.base_objects import TerraformObject, process_attribute
 from pyterraformer.parser.load_templates import get_template
 from dataclasses import dataclass
 
+
 @dataclass
 class StateResponse:
-    resource_name:str
-    remote_address:str
+    resource_name: str
+    remote_address: str
+
 
 class ResourceObject(TerraformObject):
     REQUIRED_ATTRIBUTES: List[str] = []
@@ -27,7 +29,7 @@ class ResourceObject(TerraformObject):
         return f"${{{self._type}.{self.id}.{item}}}"
 
     @property
-    def import_address(self)->str:
+    def import_address(self) -> str:
         raise NotImplementedError
 
     @lazy_property
@@ -41,7 +43,9 @@ class ResourceObject(TerraformObject):
         variables["id"] = self.id
         variables["type"] = self._type
         priority_attributes = (
-            ["name", "project", "project_id"] + self.REQUIRED_ATTRIBUTES + self.PRIORITY_ATTRIBUTES
+            ["name", "project", "project_id"]
+            + self.REQUIRED_ATTRIBUTES
+            + self.PRIORITY_ATTRIBUTES
         )
 
         # sort logic for workflow_utility attributes at top, then alphabetical

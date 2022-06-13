@@ -13,7 +13,9 @@ class Variable(TerraformObject):
     def __repr__(self):
         return (
             f"{self._type}(name={self.name}, "
-            + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()])
+            + ", ".join(
+                [f'{key}="{val}"' for key, val in self.render_variables.items()]
+            )
             + ")"
         )
 

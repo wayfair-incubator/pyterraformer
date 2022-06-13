@@ -1,2 +1,2 @@
-class TerraformBlock(list):
+class Block(list):
     pass

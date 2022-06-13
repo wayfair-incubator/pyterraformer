@@ -6,6 +6,8 @@ from fnmatch import fnmatch
 from pathlib import Path
 from subprocess import CalledProcessError, run as sub_run
 from typing import Dict, List, Union, Iterator, Any
+from pyterraformer.terraform import Terraform
+from pyterraformer.serializer import
 
 import jinja2
 from analytics_utility_core.decorators import lazy_property
@@ -20,11 +22,11 @@ from analytics_terraformer_core.constants import (
     TEMPLATE_PATH,
     TERRAFORM_BIN_PATH,
     STATE_BUCKET,
-TERRAFORM_SA_DEV,
-TERRAFORM_SA
+    TERRAFORM_SA_DEV,
+    TERRAFORM_SA
 )
 from analytics_terraformer_core.exceptions import ValidationError, TerraformApplicationError
-from analytics_terraformer_core.meta_classes import Literal, TerraformBlock
+from analytics_terraformer_core.meta_classes import Literal, Block
 from analytics_terraformer_core.workflows.enums import ExecutionMode
 
 template_loader = jinja2.FileSystemLoader(searchpath=TEMPLATE_PATH)
@@ -51,7 +53,7 @@ def process_attribute(input: Any, level=0):
         #     output[key] = item.__repr__()
         elif isinstance(item, Literal):
             output[key] = item
-        elif isinstance(item, TerraformBlock):
+        elif isinstance(item, Block):
             for idx, sub_item in enumerate(item):
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif isinstance(item, dict):
@@ -106,7 +108,7 @@ class TerraformObject(object):
                 # always cast keys to string
                 self.render_variables[str(attribute[0])] = attribute[1]
             elif isinstance(attribute, Block):
-                base = self.render_variables.get(attribute.name, TerraformBlock())
+                base = self.render_variables.get(attribute.name, Block())
                 base.append(attribute)
                 self.render_variables[attribute.name] = base
         self._type: str = type
@@ -309,9 +311,9 @@ def extract_errors(input: str):
 
 
 class TerraformWorkspace(object):
-    def __init__(self, path: str, env=None, type_: ExecutionMode = ExecutionMode.TERRAFORM):
-        from analytics_terraformer_core.generics.variables import Variable
-
+    def __init__(self, path: str, terraform:Terraform):
+        from pyterraformer.parser.generics.variables import Variable
+        self.terraform = terraform
         self.path = path
         self._path = Path(self.path)
         self.files: Dict[str, TerraformFile] = LazyFileDict()
@@ -319,178 +321,87 @@ class TerraformWorkspace(object):
         self.name = self._path.stem
         self.variables: Dict[str, Variable] = {}
         self.data: List = []
-        if self.path.endswith("dev"):
-            self.env = "dev"
-        else:
-            self.env = "prod"
-        self.type_ = type_
-        self._applied = False
 
-    def init(self, project, dev_project=True, provider_account=None):
-        from analytics_terraformer_core.generics import Provider, TerraformConfig, Backend
-        from analytics_terraformer_core.wf_helpers.models import WfProject
-        from analytics_terraformer_core import TERRAFORM_WORKSPACE_VARIABLE
+    def init(self):
+        from pyterraformer.parser.generics import Provider, TerraformConfig, Backend
         from os import makedirs
 
         makedirs(self.path, exist_ok=True)
-        if project:
-            base_project = project if isinstance(project, WfProject) else WfProject(project)
-        else:
-            base_project = None
         terraform = TerraformFile(self, "", self._path / "terraform.tf")
-        if base_project:
-            if dev_project:
-                dev_project = dev_project if isinstance(dev_project, str) else base_project.name_dev
-                project_var = self.add_variable(
-                    "tf_service_account_project",
-                    {"prod": base_project.name_prod, "dev": dev_project},
-                )
 
-                # TODO: support adding backends dynamically to avoid hardcoding
-                terraform.add_object(
-                    Provider(
-                        "google",
-                        None,
-                        [
-                            ["version", BASE_GOOGLE_VERSION],
-                            # ["credentials", provider_account],
-                            ["project", project_var.render_lookup(TERRAFORM_WORKSPACE_VARIABLE)],
-                        ],
-                    )
-                )
-            else:
-                project_var = self.add_variable("name", base_project.name_base)
-                terraform.add_object(
-                    Provider(
-                        "google",
-                        None,
-                        [
-                            ["version", BASE_GOOGLE_VERSION],
-                            # ["credentials", provider_account],
-                            ["project", project_var.render_basic()],
-                            ["region", "us-central1"],
-                        ],
-                    )
-                )
-        else:
-            terraform.add_object(
-                Provider(
-                    "google",
-                    None,
-                    [
-                        ["version", BASE_GOOGLE_VERSION],
-                        # ["credentials", provider_account],
-                        ["region", "us-central1"],
-                    ],
-                )
-            )
-
-        if self.type_ in (ExecutionMode.TERRAFORM, ExecutionMode.DRY_RUN):
-
-            terraform.add_object(
-                TerraformConfig(
-                    None,
-                    [["required_version", f"~> {BASE_TERRAFORM_VERSION}"], Backend("consul", [])],
-                )
-            )
-        elif self.type_ in (ExecutionMode.CI,):
-            terraform.add_object(
-                TerraformConfig(
-                    None,
-                    [
-                        ["required_version", f"~> {BASE_CI_TERRAFORM_VERSION}"],
-                        Backend(
-                            "gcs",
-                            [
-                                ["bucket", STATE_BUCKET],
-                                ["prefix", f"terraform/state/{self.terraform_path}"],
-                                # ["encryption_key", secret_store["gcs_terraform_encryption_key"]],
-                            ],
-                        ),
-                    ],
-                )
-            )
-        terraform.add_object(Provider("null", None, [["version", BASE_NULL_VERSION]]))
-        if self.type_ not in (ExecutionMode.CI,):
-            terraform.add_object(
-                Provider(
-                    "secrethandler", None, [["vault_token", Literal('file("/run/vault/token")')]]
-                )
-            )
-        self.add_file(terraform)
         return self
-
-    def apply(self, workspace: str = None):
-        # default to the local workspace
-        workspace = workspace or self.env or "prod"
-        from analytics_terraformer_core.generics import TerraformConfig
-
-        if self._applied:
-            return None
-        if workspace == "dev":
-            creds = secret_store[TERRAFORM_SA_DEV]
-        else:
-            creds = secret_store[TERRAFORM_SA]
-        # temporary override for VPC work
-        # creds = secret_store["eden-terraform-sa"]
-        state_config = self.files["terraform.tf"]
-        for obj in state_config.objects:
-            # this handling can be cleaned up after all existing paths have been fixed
-            # but provides backwards compatibility with the initial [incorrect] state sitch
-            if isinstance(obj, TerraformConfig):
-                obj.backends[0].prefix = f"terraform/state/{self.terraform_path}"
-                if "encryption_key" in obj.backends[0].render_variables:
-                    del obj.backends[0].render_variables["encryption_key"]
-                obj._changed = True
-        changed = state_config.save()
-        if not changed:
-            raise ValueError
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            secrets = os.path.join(tmpdirname, "keyfile.json")
-            with open(secrets, "w") as f:
-                f.write(creds)
-            key_path = os.path.join(tmpdirname, "tmpssh")
-            with open(key_path, "w") as keyfile:
-                lines = secret_store["ssh_identity"].replace("|", "\n")
-                keyfile.write(lines)
-            os.chmod(key_path, 0o600)
-            ssh_cmd = "ssh -i %s -o StrictHostKeyChecking=no" % keyfile.name.replace("\\", "\\\\")
-
-            my_env = os.environ.copy()
-            my_env["GOOGLE_APPLICATION_CREDENTIALS"] = secrets
-            my_env["GOOGLE_ENCRYPTION_KEY"] = secret_store["gcs_terraform_encryption_key"]
-            my_env["TF_PLUG_CACHE_DIR"] = TERRAFORM_BIN_PATH
-            my_env["TF_PLUGIN_CACHE_DIR"] = TERRAFORM_BIN_PATH
-            my_env["GIT_SSH_COMMAND"] = ssh_cmd
-
-            run_cmd = lambda cmd: sub_run(
-                cmd, cwd=self.path, env=my_env, check=True, capture_output=True, encoding="utf-8"
-            ).stdout
-
-            try:
-                # init, then list workspaces
-                for cmd in [[TERRAFORM_PATH, "init"], [TERRAFORM_PATH, "workspace", "list"]]:
-                    check = run_cmd(cmd)
-                # create workspace if required
-                if workspace not in check:
-                    run_cmd([TERRAFORM_PATH, "workspace", "new", workspace])
-                # then select, plan, and apply
-                # 4/23 removed [TERRAFORM_PATH, "plan"] step - redundant
-
-                for cmd in [
-                    [TERRAFORM_PATH, "workspace", "select", workspace],
-                    # [TERRAFORM_PATH, "import", "google_access_context_manager_service_perimeter.eden_dev_perimeter",
-                    #  'accessPolicies/273592504183/servicePerimeters/eden_dev_service_perimeter'],
-                    # [TERRAFORM_PATH, "plan"],
-                    [TERRAFORM_PATH, "apply", "-auto-approve"],
-                ]:
-                    run = run_cmd(cmd)
-                self._applied = True
-                print(run)
-            except CalledProcessError as e:
-                errors = extract_errors(e.stderr)
-                raise TerraformApplicationError(errors)
-        return str(run)
+    #
+    # def apply(self, workspace: str = None):
+    #     # default to the local workspace
+    #     workspace = workspace or self.env or "prod"
+    #     from analytics_terraformer_core.generics import TerraformConfig
+    #
+    #     if self._applied:
+    #         return None
+    #     if workspace == "dev":
+    #         creds = secret_store[TERRAFORM_SA_DEV]
+    #     else:
+    #         creds = secret_store[TERRAFORM_SA]
+    #     # temporary override for VPC work
+    #     # creds = secret_store["eden-terraform-sa"]
+    #     state_config = self.files["terraform.tf"]
+    #     for obj in state_config.objects:
+    #         # this handling can be cleaned up after all existing paths have been fixed
+    #         # but provides backwards compatibility with the initial [incorrect] state sitch
+    #         if isinstance(obj, TerraformConfig):
+    #             obj.backends[0].prefix = f"terraform/state/{self.terraform_path}"
+    #             if "encryption_key" in obj.backends[0].render_variables:
+    #                 del obj.backends[0].render_variables["encryption_key"]
+    #             obj._changed = True
+    #     changed = state_config.save()
+    #     if not changed:
+    #         raise ValueError
+    #     with tempfile.TemporaryDirectory() as tmpdirname:
+    #         secrets = os.path.join(tmpdirname, "keyfile.json")
+    #         with open(secrets, "w") as f:
+    #             f.write(creds)
+    #         key_path = os.path.join(tmpdirname, "tmpssh")
+    #         with open(key_path, "w") as keyfile:
+    #             lines = secret_store["ssh_identity"].replace("|", "\n")
+    #             keyfile.write(lines)
+    #         os.chmod(key_path, 0o600)
+    #         ssh_cmd = "ssh -i %s -o StrictHostKeyChecking=no" % keyfile.name.replace("\\", "\\\\")
+    #
+    #         my_env = os.environ.copy()
+    #         my_env["GOOGLE_APPLICATION_CREDENTIALS"] = secrets
+    #         my_env["GOOGLE_ENCRYPTION_KEY"] = secret_store["gcs_terraform_encryption_key"]
+    #         my_env["TF_PLUG_CACHE_DIR"] = TERRAFORM_BIN_PATH
+    #         my_env["TF_PLUGIN_CACHE_DIR"] = TERRAFORM_BIN_PATH
+    #         my_env["GIT_SSH_COMMAND"] = ssh_cmd
+    #
+    #         run_cmd = lambda cmd: sub_run(
+    #             cmd, cwd=self.path, env=my_env, check=True, capture_output=True, encoding="utf-8"
+    #         ).stdout
+    #
+    #         try:
+    #             # init, then list workspaces
+    #             for cmd in [[TERRAFORM_PATH, "init"], [TERRAFORM_PATH, "workspace", "list"]]:
+    #                 check = run_cmd(cmd)
+    #             # create workspace if required
+    #             if workspace not in check:
+    #                 run_cmd([TERRAFORM_PATH, "workspace", "new", workspace])
+    #             # then select, plan, and apply
+    #             # 4/23 removed [TERRAFORM_PATH, "plan"] step - redundant
+    #
+    #             for cmd in [
+    #                 [TERRAFORM_PATH, "workspace", "select", workspace],
+    #                 # [TERRAFORM_PATH, "import", "google_access_context_manager_service_perimeter.eden_dev_perimeter",
+    #                 #  'accessPolicies/273592504183/servicePerimeters/eden_dev_service_perimeter'],
+    #                 # [TERRAFORM_PATH, "plan"],
+    #                 [TERRAFORM_PATH, "apply", "-auto-approve"],
+    #             ]:
+    #                 run = run_cmd(cmd)
+    #             self._applied = True
+    #             print(run)
+    #         except CalledProcessError as e:
+    #             errors = extract_errors(e.stderr)
+    #             raise TerraformApplicationError(errors)
+    #     return str(run)
 
     @property
     def terraform_path(self):
@@ -506,7 +417,7 @@ class TerraformWorkspace(object):
         return self.files[name]
 
     def add_file(self, file, new=True):
-        from analytics_terraformer_core.parser import parse_file
+        from pyterraformer.parser import parse_file
 
         if isinstance(file, str) and not file.endswith("variables.tf"):
             nfile = LazyFile(file, self)
@@ -663,184 +574,4 @@ def value_match(item, value) -> bool:
         return item == value
 
 
-class TerraformFile(object):
-    def __init__(
-        self,
-        workspace: TerraformWorkspace,
-        text: str,
-        location: Union[str, Path],
-        initial_parse_flag: bool = False,
-    ):
-        self.workspace = workspace
-        self._text = text
-        self.objects: List = []
-        self.location = location
-        self.name = os.path.basename(location)
-        self.locals: Dict = {}
-        self._changed = False
-        if self not in self.workspace.files:
-            self.workspace.add_file(self, not initial_parse_flag)
-        self._applied = False
 
-    @property
-    def changed(self):
-        return self._changed
-
-    @changed.setter
-    def changed(self, val):
-        self._changed = val
-
-    def relative_path(self, path: str):
-        return get_root(str(self.location), path)
-
-    def get_object(self, **kwargs):
-        for object in self.objects:
-            if all([value_match(getattr(object, key, None), val) for key, val in kwargs.items()]):
-                return object
-        raise ValueError(
-            f"No object matching filter criteria {kwargs} found in file {self.location}"
-        )
-
-    def delete_object(self, object):
-        orig = self.objects
-        self.objects = [obj for obj in self.objects if obj != object]
-        self.changed = orig != self.objects
-
-    def find(self, object_type, invert=False):
-        output = []
-        for object in self.objects:
-            if isinstance(object, object_type):
-                output.append(object)
-        if invert:
-            return reversed(output)
-        return output
-
-    def add_object(
-        self,
-        object: TerraformObject,
-        position="default",
-        exists_okay=False,
-        replace=False,
-        initial_parse_flag=False,
-    ):
-
-        from analytics_terraformer_core.resources.resource_object import ResourceObject
-        from analytics_terraformer_core.modules.base_module import BaseModule
-        from analytics_terraformer_core.generics import Variable, Data
-
-        object._file = self
-        duplicates = None
-        if isinstance(object, (Variable, Data)):
-            duplicates = [
-                idx
-                for idx, obj in enumerate(self.objects)
-                if isinstance(object, (Variable, Data)) and object.name == getattr(obj, "name", "")
-            ]
-        elif isinstance(object, ResourceObject):
-
-            duplicates = [
-                idx
-                for idx, obj in enumerate(self.objects)
-                if isinstance(object, ResourceObject)
-                and object.id + (object._type or "")
-                == getattr(obj, "id", "") + getattr(obj, "_type", "")
-            ]
-        elif isinstance(object, BaseModule):
-
-            duplicates = [
-                idx
-                for idx, obj in enumerate(self.objects)
-                if isinstance(object, BaseModule)
-                and object.id + (object._type or "")
-                == getattr(obj, "id", "") + getattr(obj, "_type", "")
-            ]
-        if duplicates:
-            if replace:
-                self.objects = [
-                    obj for idx, obj in enumerate(self.objects) if idx not in (duplicates)
-                ]
-            elif exists_okay:
-                return
-            else:
-                raise ValueError(
-                    f"Duplicate resource name or ID detected {[obj for idx, obj in enumerate(self.objects) if idx in (duplicates)]} in file {self.name}! Cannot add unless the 'replace' or 'exists_okay' flags are set."
-                )
-
-        # only flag if changed as not already present
-        if not initial_parse_flag:
-            self.changed = True
-        if position == "first":
-            self.objects.insert(0, object)
-        elif position == "last":
-            self.objects.append(object)
-        elif position == "default":
-            indexes = [idx for idx, val in enumerate(self.objects) if val._type == object._type]
-            if indexes:
-                self.objects.insert(indexes[-1] + 1, object)
-            else:
-                self.objects.append(object)
-
-        elif isinstance(position, int):
-            self.objects.insert(position, object)
-        else:
-            raise ValueError(f"Invalid Position Argument {position}")
-
-    def render(self, **variables):
-        text = []
-        for object in self.objects:
-            text.append(object.text)
-        return "\n".join(text)
-
-    @property
-    def text(self):
-        from analytics_terraformer_core.generics import Comment
-
-        out = []
-        for idx, object in enumerate(self.objects):
-            if isinstance(object, Comment):
-                out.append(object.text)
-            elif idx == len(self.objects) - 1:
-                out.append(object.text + "\n")
-            else:
-                out.append(object.text + "\n\n")
-        return "".join(out)
-
-    @property
-    def changed_flag(self):
-        return self.changed or any([object._changed for object in self.objects])
-
-    def save(self):
-        if self.changed_flag:
-            print(self.text)
-            try:
-                with open(self.location, "r") as file:
-                    orig_text = file.read()
-            except FileNotFoundError as e:
-                orig_text = None
-            # the rewrite flags aren't perfect, check if there are actual changes
-            try:
-                with open(self.location, "w") as file:
-                    file.write(self.text)
-            except FileNotFoundError:
-                import os
-
-                os.makedirs(os.path.dirname(self.location))
-                with open(self.location, "w") as file:
-                    file.write(self.text)
-            # pass out the original text, so we can make a judgement on committing after formatting
-            return orig_text
-        return False
-
-    def __iter__(self):
-        self._idx = 0
-        return self
-
-    def __next__(self):
-        try:
-            out = self.objects[self._idx]
-            self._idx += 1
-            return out
-
-        except IndexError:
-            self._idx = 0
-            raise StopIteration  # Done iterating.

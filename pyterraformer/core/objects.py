@@ -6,7 +6,8 @@ from pyterraformer.utility.decorators import lazy_property
 
 
 def process_attribute(input: Any):
-    from pyterraformer.parser.generics import Variable, Literal, TerraformBlock
+    from pyterraformer.parser.generics import Variable, Literal, Block
+
     if not isinstance(input, dict):
         return input
     output = {}
@@ -15,7 +16,7 @@ def process_attribute(input: Any):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
-        elif isinstance(item, TerraformBlock):
+        elif isinstance(item, Block):
             for idx, sub_item in enumerate(item):
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif isinstance(item, dict):
@@ -30,8 +31,11 @@ def process_attribute(input: Any):
 class TerraformObject(object):
     extractors: Dict[str, str] = {}
 
-    def __init__(self, type, original_text: Optional[str], attributes: Optional[dict]):
-        from pyterraformer.parser.generics import TerraformBlock, Block
+    def __init__(
+        self, id: str, type, original_text: Optional[str], attributes: Optional[List]
+    ):
+        from pyterraformer.parser.generics import Block, Block
+
         self.render_variables: Dict[str, str] = {}
         self.attributes = attributes or []
         for attribute in self.attributes:
@@ -39,7 +43,7 @@ class TerraformObject(object):
                 # always cast keys to string
                 self.render_variables[str(attribute[0])] = attribute[1]
             elif isinstance(attribute, Block):
-                base = self.render_variables.get(attribute.name, TerraformBlock())
+                base = self.render_variables.get(attribute.name, Block())
                 base.append(attribute)
                 self.render_variables[attribute.name] = base
         self._type: str = type
@@ -51,9 +55,11 @@ class TerraformObject(object):
 
     def __repr__(self):
         return (
-                f"{self._type}("
-                + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()])
-                + ")"
+            f"{self._type}("
+            + ", ".join(
+                [f'{key}="{val}"' for key, val in self.render_variables.items()]
+            )
+            + ")"
         )
 
     @classmethod
@@ -78,10 +84,10 @@ class TerraformObject(object):
         elif self.render_variables and name in self.render_variables:
             return self.__dict__.get("render_variables").get(name)
         elif (
-                self.render_variables
-                and "_" in name
-                and name.endswith("resolved")
-                and name.rsplit("_", 1)[0] in self.render_variables
+            self.render_variables
+            and "_" in name
+            and name.endswith("resolved")
+            and name.rsplit("_", 1)[0] in self.render_variables
         ):
             lookup = name.rsplit("_", 1)[0]
             return self.resolved_attributes.get(lookup)
@@ -95,12 +101,12 @@ class TerraformObject(object):
         Unless it's also in the list of things that we should render.
         Woof."""
         if name.startswith("_") or (
-                name in ("row_num", "template", "name", "id")
-                and not (self.render_variables and name in self.render_variables)
+            name in ("row_num", "template", "name", "id")
+            and not (self.render_variables and name in self.render_variables)
         ):
             super().__setattr__(name, value)
         elif (self.render_variables and name in self.render_variables) or getattr(
-                self, "_initialized", False
+            self, "_initialized", False
         ):
             self._changed = True
             self.__dict__.get("render_variables")[name] = value
@@ -146,10 +152,10 @@ class TerraformObject(object):
         final = {}
         for key, item in self.render_variables.items():
             if (
-                    isinstance(item, StringLit)
-                    and len(item.contents) == 1
-                    and str(item).startswith('"${')
-                    and str(item).endswith('$}"')
+                isinstance(item, StringLit)
+                and len(item.contents) == 1
+                and str(item).startswith('"${')
+                and str(item).endswith('$}"')
             ):
                 item = str(item)[3:-3]
                 final[key] = Literal(item)
@@ -170,7 +176,10 @@ class TerraformObject(object):
         elif isinstance(item, int):
             resolved = item
         elif isinstance(item, dict):
-            resolved = item
+            resolved = {
+                self.resolve_item(key): self.resolve_item(value)
+                for key, value in item.items()
+            }
         else:
             resolved = item.resolve(self._workspace, self._file, None, None)
         if isinstance(resolved, Variable) and hasattr(resolved, "default"):

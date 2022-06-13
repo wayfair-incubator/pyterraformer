@@ -1,6 +1,8 @@
-
-
 class ValidationError(BaseException):
+    pass
+
+
+class TerraformExecutionError(BaseException):
     pass
 
 

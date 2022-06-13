@@ -22,9 +22,9 @@ from .interpolation import (
     Types,
     ArrayLookup,
     GenericFunction,
-Symlink,
-LegacySplat,
-ToSet
+    Symlink,
+    LegacySplat,
+    ToSet,
 )
 from .local import Local
 from .meta_arguments import DependsOn, Provider, ForEach, Count, Lifecycle
@@ -33,4 +33,4 @@ from .output import Output
 from .terraform import TerraformConfig
 from .variables import Variable
 from .literal import Literal
-from .terraform_block import TerraformBlock
+from .terraform_block import Block

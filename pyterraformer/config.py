@@ -13,8 +13,8 @@ atexit.register(shutil.rmtree, tempdir)
 class TerraformerConfig(GoodConf):
     "Configuration for pyterraformer"
     DEBUG: bool = Field(default=False)
-    TERRAFORM_EXEC: str = Field(default='')
-    DEFAULT_WORKSPACE: str = Field(default='prod')
+    TERRAFORM_EXEC: str = Field(default="")
+    DEFAULT_WORKSPACE: str = Field(default="prod")
     GIT_MODULE_PROVIDER_KEY: Optional[str] = Field(default=None)
     TF_PLUGIN_CACHE_DIR: Optional[str] = Field(default=tempdir)
 
@@ -27,5 +27,6 @@ class TerraformerConfig(GoodConf):
     @property
     def state_provider(self):
         return None
+
 
 terraform_config = TerraformerConfig(load=True)

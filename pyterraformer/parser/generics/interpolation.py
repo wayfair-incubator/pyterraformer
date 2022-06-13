@@ -23,9 +23,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from analytics_terraformer_core.base_objects import TerraformWorkspace, TerraformFile
-from analytics_terraformer_core.meta_classes import TerraformBlock
-
-
+from analytics_terraformer_core.meta_classes import Block
 
 
 @dataclass
@@ -87,7 +85,11 @@ class FileObjectLookupInstantiator(Resolvable):
 
     def __getattr__(self, item):
         return FileObjectSubClassLookupInstantiator(
-            [obj for obj in self.objects if hasattr(obj, "_type") and obj._type == str(item)]
+            [
+                obj
+                for obj in self.objects
+                if hasattr(obj, "_type") and obj._type == str(item)
+            ]
         )
 
 
@@ -108,7 +110,11 @@ class DataLookupInstantiator(Resolvable):
 
     def __getattr__(self, item):
         return DataSubClassLookupInstantiator(
-            [obj for obj in self.workspace.data if hasattr(obj, "type") and obj.type == str(item)]
+            [
+                obj
+                for obj in self.workspace.data
+                if hasattr(obj, "type") and obj.type == str(item)
+            ]
         )
 
 
@@ -305,7 +311,9 @@ class String(Resolvable):
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         if isinstance(parent_instance, PropertyLookup):
-            resolved = PropertyLookup(self.item).resolve(workspace, file, parent, parent_instance)
+            resolved = PropertyLookup(self.item).resolve(
+                workspace, file, parent, parent_instance
+            )
             return resolved
         return self.item
 
@@ -319,7 +327,9 @@ class File(Resolvable):
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         if isinstance(parent_instance, PropertyLookup):
-            resolved = PropertyLookup(self.item).resolve(workspace, file, parent, parent_instance)
+            resolved = PropertyLookup(self.item).resolve(
+                workspace, file, parent, parent_instance
+            )
             out = resolved
         else:
             out = self.item
@@ -337,7 +347,9 @@ class Concat(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
+                resolved = PropertyLookup(item).resolve(
+                    workspace, file, parent, parent_instance
+                )
                 out = resolved
             elif isinstance(item, Resolvable):
                 out = item.resolve(workspace, file, None, None)
@@ -384,7 +396,9 @@ class Replace(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
+                resolved = PropertyLookup(item).resolve(
+                    workspace, file, parent, parent_instance
+                )
                 out = resolved
             else:
                 out = item
@@ -399,13 +413,17 @@ class GenericFunction(Resolvable):
         self.items = items[1:]
 
     def __repr__(self):
-        return "{}({})".format(self.name, ",".join([item.__repr__() for item in self.items]))
+        return "{}({})".format(
+            self.name, ",".join([item.__repr__() for item in self.items])
+        )
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
+                resolved = PropertyLookup(item).resolve(
+                    workspace, file, parent, parent_instance
+                )
                 out = resolved
             else:
                 out = item
@@ -425,7 +443,9 @@ class Merge(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
+                resolved = PropertyLookup(item).resolve(
+                    workspace, file, parent, parent_instance
+                )
                 out = resolved
             else:
                 out = item
@@ -498,7 +518,9 @@ class BinaryOp(Resolvable):
         left = all[0]
         operator, right = all[1]
         if isinstance(parent_instance, PropertyLookup):
-            left = PropertyLookup(left).resolve(workspace, file, parent, parent_instance)
+            left = PropertyLookup(left).resolve(
+                workspace, file, parent, parent_instance
+            )
         if operator == "==":
             return left == right
         elif operator == ">=":
@@ -532,7 +554,9 @@ class BinaryTerm(Resolvable):
         return "".join([val.__repr__() for val in self.args])
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
-        return [item.resolve(workspace, file, parent, parent_instance) for item in self.args]
+        return [
+            item.resolve(workspace, file, parent, parent_instance) for item in self.args
+        ]
 
 
 class Boolean(Resolvable):
@@ -561,14 +585,14 @@ class Block(Resolvable):
                 key = str(attribute[0])
                 val = attribute[1]
                 if isinstance(val, Block):
-                    base = getattr(self, key, TerraformBlock())
+                    base = getattr(self, key, Block())
                     base.append(val)
                     val = base
                 setattr(self, key, val)
                 self._keys[key] = val
             elif isinstance(attribute, Block):
                 key = str(attribute.name)
-                base = getattr(self, attribute.name, TerraformBlock())
+                base = getattr(self, attribute.name, Block())
                 base.append(attribute)
                 setattr(self, key, base)
                 self._keys[key] = attribute
@@ -582,7 +606,7 @@ class Block(Resolvable):
     def __repr__(self):
         out = []
         for key, item in self._keys.items():
-            if isinstance(item, TerraformBlock):
+            if isinstance(item, Block):
                 for sub in item:
                     out.append(f"{key} {sub.__repr__()}")
             elif isinstance(item, Block):
@@ -593,7 +617,6 @@ class Block(Resolvable):
         return f"""{{
         {out}
         }}"""
-
 
 
 class Symlink(Resolvable):

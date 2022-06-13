@@ -1,5 +1,3 @@
-
-
 class Literal(object):
     def __init__(self, str):
         self.value = str

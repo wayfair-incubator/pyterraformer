@@ -12,7 +12,9 @@ class Provider(TerraformObject):
     def __repr__(self):
         return (
             f"{self._type}-{self.ptype}("
-            + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()])
+            + ", ".join(
+                [f'{key}="{val}"' for key, val in self.render_variables.items()]
+            )
             + ")"
         )
 

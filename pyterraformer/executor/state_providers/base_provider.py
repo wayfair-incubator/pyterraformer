@@ -1,6 +1,0 @@
-
-
-
-
-class BaseStateProvider():
-    pass

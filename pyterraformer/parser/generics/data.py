@@ -1,5 +1,6 @@
 from pyterraformer.core.objects import TerraformObject
 
+
 class Data(TerraformObject):
     _type = "data"
 
@@ -11,7 +12,9 @@ class Data(TerraformObject):
     def __repr__(self):
         return (
             f"{self._type}({self.name})("
-            + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()])
+            + ", ".join(
+                [f'{key}="{val}"' for key, val in self.render_variables.items()]
+            )
             + ")"
         )
 
@@ -23,7 +26,11 @@ class Data(TerraformObject):
                 final[key] = self.render_variables[key]
 
         for key, item in final.items():
-            if isinstance(item, str) and item.startswith('"${') and item.endswith('$}"'):
+            if (
+                isinstance(item, str)
+                and item.startswith('"${')
+                and item.endswith('$}"')
+            ):
                 item = item[3:-3]
                 final[key] = Literal(item)
 
