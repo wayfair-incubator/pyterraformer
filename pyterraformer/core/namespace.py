@@ -7,57 +7,85 @@ from pathlib import Path
 from subprocess import CalledProcessError, run as sub_run
 from typing import Dict, List, Union, Iterator, Any
 from pyterraformer.terraform import Terraform
-from pyterraformer.serializer import
 
 import jinja2
-from analytics_utility_core.decorators import lazy_property
-from analytics_utility_core.secrets import secret_store
+#
+# from analytics_terraformer_core.constants import (
+#     TERRAFORM_PATH,
+#     BASE_TERRAFORM_VERSION,
+#     BASE_CI_TERRAFORM_VERSION,
+#     BASE_GOOGLE_VERSION,
+#     BASE_NULL_VERSION,
+#     TEMPLATE_PATH,
+#     TERRAFORM_BIN_PATH,
+#     STATE_BUCKET,
+#     TERRAFORM_SA_DEV,
+#     TERRAFORM_SA
+# )
+from pyterraformer.exceptions import ValidationError, TerraformApplicationError
+from pyterraformer.core.generics import Literal, Block
 
-from analytics_terraformer_core.constants import (
-    TERRAFORM_PATH,
-    BASE_TERRAFORM_VERSION,
-    BASE_CI_TERRAFORM_VERSION,
-    BASE_GOOGLE_VERSION,
-    BASE_NULL_VERSION,
-    TEMPLATE_PATH,
-    TERRAFORM_BIN_PATH,
-    STATE_BUCKET,
-    TERRAFORM_SA_DEV,
-    TERRAFORM_SA
-)
-from analytics_terraformer_core.exceptions import ValidationError, TerraformApplicationError
-from analytics_terraformer_core.meta_classes import Literal, Block
-from analytics_terraformer_core.workflows.enums import ExecutionMode
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyterraformer.core.workspace import TerraformWorkspace
+    from pyterraformer.core import TerraformObject
+
+def get_root(path: str, breaker: Union[str, List[str]] = None):
+    if isinstance(breaker, str):
+        breaker = [breaker]
+    elif not breaker:
+        breaker = ["terraform", "terraform-local-cache"]
+    else:
+        breaker = breaker
+    parts = splitall(path)
+    base = []
+    for item in parts:
+        base.append(item)
+        if item.lower() in breaker:
+            break
+    joined = os.path.join(*base)
+    return str(Path(os.path.relpath(path, joined)).as_posix())
 
 
+class TerraformNamespace(object):
+    def __init__(self, name:str, workspace:"TerraformWorkspace"):
+        self.workspace:"TerraformWorkspace" = workspace
+        self.name = name
+        self.objects: List = []
 
+    def resolve(self):
+        if not self.workspace.parser:
+            raise ValueError('No parser provided to look at files in this workspace')
+        return self.workspace.parser.parse_file(self.name, self.workspace)
+        # from analytics_terraformer_core.parser import parse_file
+        #
+        # return parse_file(self.file, self.parent)
 
-class TerraformFile(object):
+class LazyFile(TerraformNamespace):
+    def __init__(self, file:str, parent:"TerraformWorkspace"):
+        super().__init__(name=os.path.basename(file).replace('.tf', ''), parent=parent)
+        self.file = file
+
+    def resolve(self):
+        if not self.parent.parser:
+            raise ValueError('No parser provided to look at files in this workspace')
+        return self.parent.parser.parse_file(self.file)
+
+class TerraformFile(TerraformNamespace):
     def __init__(
             self,
-            workspace: TerraformWorkspace,
+            workspace: "TerraformWorkspace",
             text: str,
             location: Union[str, Path],
-            initial_parse_flag: bool = False,
     ):
-        self.workspace = workspace
         self._text = text
-        self.objects: List = []
+        name = os.path.basename(location)
+        super().__init__( name=name, workspace=workspace)
         self.location = location
-        self.name = os.path.basename(location)
         self.locals: Dict = {}
-        self._changed = False
         if self not in self.workspace.files:
-            self.workspace.add_file(self, not initial_parse_flag)
-        self._applied = False
-
-    @property
-    def changed(self):
-        return self._changed
-
-    @changed.setter
-    def changed(self, val):
-        self._changed = val
+            self.workspace.add_file(self)
 
     def relative_path(self, path: str):
         return get_root(str(self.location), path)
@@ -86,16 +114,16 @@ class TerraformFile(object):
 
     def add_object(
             self,
-            object: TerraformObject,
+            object: "TerraformObject",
             position="default",
             exists_okay=False,
             replace=False,
             initial_parse_flag=False,
     ):
 
-        from analytics_terraformer_core.resources.resource_object import ResourceObject
-        from analytics_terraformer_core.modules.base_module import BaseModule
-        from analytics_terraformer_core.generics import Variable, Data
+        from pyterraformer.core.resources import ResourceObject
+        from pyterraformer.core.modules import ModuleObject
+        from pyterraformer.core.generics import Variable, Data
 
         object._file = self
         duplicates = None
@@ -114,12 +142,12 @@ class TerraformFile(object):
                    and object.id + (object._type or "")
                    == getattr(obj, "id", "") + getattr(obj, "_type", "")
             ]
-        elif isinstance(object, BaseModule):
+        elif isinstance(object, ModuleObject):
 
             duplicates = [
                 idx
                 for idx, obj in enumerate(self.objects)
-                if isinstance(object, BaseModule)
+                if isinstance(object, ModuleObject)
                    and object.id + (object._type or "")
                    == getattr(obj, "id", "") + getattr(obj, "_type", "")
             ]

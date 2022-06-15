@@ -1,8 +1,5 @@
-from analytics_utility_core.decorators import lazy_property
 
-from analytics_terraformer_core.base_objects import TerraformObject, Literal
-from analytics_terraformer_core.generics import StringLit
-from analytics_terraformer_core.templates import get_template
+from pyterraformer.core.objects import TerraformObject
 
 
 class Variable(TerraformObject):
@@ -27,12 +24,15 @@ class Variable(TerraformObject):
         raise KeyError(val)
 
     def render_lookup(self, item):
+        from pyterraformer.core.generics import Literal
         return Literal(f'var.{self.name}["{item}"]')
 
     def render_attribute(self, item):
+        from pyterraformer.core.generics import Literal
         return Literal(f"var.{self.name}.{item}")
 
     def render_basic(self):
+        from pyterraformer.core.generics import Literal
         return Literal(f"var.{self.name}")
 
     def get(self, val, fallback=None):
@@ -41,12 +41,10 @@ class Variable(TerraformObject):
                 return item
         return fallback
 
-    @lazy_property
-    def template(self):
-        return get_template("variables")
 
     def get_type(self, val):
-        from analytics_terraformer_core.generics.interpolation import String
+        from pyterraformer.core.generics.interpolation import String
+        from pyterraformer.core.generics import Literal, StringLit
 
         if isinstance(val, list):
             if not val:

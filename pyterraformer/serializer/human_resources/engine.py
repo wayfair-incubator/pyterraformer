@@ -1,6 +1,7 @@
 from lark import Lark, Transformer, v_args, Tree
+from lark.tree import Meta
 
-from pyterraformer.parser.generics import (
+from pyterraformer.core.generics import (
     Comment,
     Variable,
     Interpolation,
@@ -33,7 +34,9 @@ from pyterraformer.parser.generics import (
     Symlink,
     ToSet,
 )
-
+from pyterraformer.core.resources import ResourceObject
+from pyterraformer.core.modules import ModuleObject
+from pyterraformer.core.objects import ObjectMetadata
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
 grammar = r"""
@@ -207,7 +210,7 @@ class ParseToObjects(Transformer):
         Transformer.__init__(self, visit_tokens)
         self.text = text
 
-    def meta_to_text(self, meta):
+    def meta_to_text(self, meta:Meta):
         return self.text[meta.start_pos : meta.end_pos]
 
     def IDENTIFIER(self, args):
@@ -223,8 +226,10 @@ class ParseToObjects(Transformer):
         return int(args.value)
 
     @v_args(meta=True)
-    def resource(self, args, meta):
+    def resource(self, meta:Meta, args):
         type, name = args[0:2]
+
+
         out = RESOURCES_MAP[str(type).replace('"', "")](
             name, str(type), self.meta_to_text(meta), args[2:]
         )
@@ -232,14 +237,14 @@ class ParseToObjects(Transformer):
         return out
 
     @v_args(meta=True)
-    def module(self, args, meta):
+    def module(self, meta:Meta, args):
         name = args[0]
-        out = Module(self.meta_to_text(meta), name, args[1:])
+        out = ModuleObject(self.meta_to_text(meta), name, args[1:])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def variable(self, args, meta):
+    def variable(self, meta:Meta, args):
         name = args[0]
         args = args[1:]
         out = Variable(self.meta_to_text(meta), name, args)
@@ -247,45 +252,45 @@ class ParseToObjects(Transformer):
         return out
 
     @v_args(meta=True)
-    def provider(self, args, meta):
+    def provider(self, meta:Meta, args):
         name = args[0]
         out = Provider(name, self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def metadata(self, args, meta):
+    def metadata(self, meta:Meta, args):
         out = TerraformConfig(self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def terraform(self, args, meta):
+    def terraform(self, meta:Meta, args):
         out = TerraformConfig(self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def data(self, args, meta):
+    def data(self, meta:Meta, args):
         type, name = args[0:2]
         out = Data(name, type, self.meta_to_text(meta), args[2:])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def locals(self, args, meta):
+    def locals(self, meta:Meta, args):
         out = Local(self.meta_to_text(meta), args[0])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def comment(self, args, meta):
+    def comment(self, meta:Meta, args):
         out = Comment(args[0].value)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def multiline_comment(self, args, meta):
+    def multiline_comment(self, meta:Meta, args):
         base = args[0].value
         if len(args) > 1:
             base += args[1].value

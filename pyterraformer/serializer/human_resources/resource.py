@@ -2,8 +2,8 @@ from typing import List, Optional
 
 from pyterraformer.utility.decorators import lazy_property
 
-from pyterraformer.base_objects import TerraformObject, process_attribute
-from pyterraformer.parser.load_templates import get_template
+from pyterraformer.base_objects import TerraformObject
+from pyterraformer.serializer.load_templates import get_template
 from dataclasses import dataclass
 
 

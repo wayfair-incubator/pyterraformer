@@ -1,4 +1,4 @@
-from analytics_terraformer_core.base_objects import TerraformObject
+from pyterraformer.core.objects import TerraformObject
 
 
 class Output(TerraformObject):

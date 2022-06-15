@@ -19,6 +19,10 @@ Please describe what you expected would happen.
 
 Please describe what happened instead.
 
+## Terraform Code
+
+If relevant, terraform code sample, either unparseable input or incorrect output.
+
 ## Affected Version
 
 Please provide the version number where this issue was encountered.

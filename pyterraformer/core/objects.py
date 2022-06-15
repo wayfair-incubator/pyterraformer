@@ -1,12 +1,12 @@
 from typing import Dict, Any, List, Optional
-
+from dataclasses import dataclass
 from pyterraformer.exceptions import ValidationError
-from pyterraformer.parser.load_templates import env
+from pyterraformer.serializer.load_templates import env
 from pyterraformer.utility.decorators import lazy_property
 
 
 def process_attribute(input: Any):
-    from pyterraformer.parser.generics import Variable, Literal, Block
+    from pyterraformer.core.generics import Variable, Literal, Block
 
     if not isinstance(input, dict):
         return input
@@ -27,31 +27,56 @@ def process_attribute(input: Any):
             output[key] = item
     return output
 
+@dataclass
+class ObjectMetadata:
+    source_file:Optional[str] = None
+    orig_text:Optional[str] = None
 
 class TerraformObject(object):
-    extractors: Dict[str, str] = {}
 
     def __init__(
-        self, id: str, type, original_text: Optional[str], attributes: Optional[List]
+            self, type, id:Optional[str]=None, metadata:Optional[ObjectMetadata]=None, **kwargs
     ):
-        from pyterraformer.parser.generics import Block, Block
 
-        self.render_variables: Dict[str, str] = {}
-        self.attributes = attributes or []
-        for attribute in self.attributes:
-            if isinstance(attribute, list):
-                # always cast keys to string
-                self.render_variables[str(attribute[0])] = attribute[1]
-            elif isinstance(attribute, Block):
-                base = self.render_variables.get(attribute.name, Block())
-                base.append(attribute)
-                self.render_variables[attribute.name] = base
+        self.metadata = metadata or ObjectMetadata()
+        self.id = id
+        arguments = kwargs or {}
+        self.render_variables: Dict[str, str] = {str(key):value for key, value in arguments.items()}
+        # for attribute in self.attributes:
+        #     if isinstance(attribute, list):
+        #         # always cast keys to string
+        #         self.render_variables[str(attribute[0])] = attribute[1]
+        #     elif isinstance(attribute, Block):
+        #         base = self.render_variables.get(attribute.name, Block())
+        #         base.append(attribute)
+        #         self.render_variables[attribute.name] = base
         self._type: str = type
-        self._original_text: str = original_text
         self._changed = False
         self._workspace = None
         self._file = None
         self._initialized = True
+
+    # def __init__(
+    #     self, type, id:Optional[str]=None, original_text: Optional[str]=None, attributes: Optional[List] = None
+    # ):
+    #     from pyterraformer.core.generics import Block
+    #
+    #     self.render_variables: Dict[str, str] = {}
+    #     self.attributes = attributes or []
+    #     for attribute in self.attributes:
+    #         if isinstance(attribute, list):
+    #             # always cast keys to string
+    #             self.render_variables[str(attribute[0])] = attribute[1]
+    #         elif isinstance(attribute, Block):
+    #             base = self.render_variables.get(attribute.name, Block())
+    #             base.append(attribute)
+    #             self.render_variables[attribute.name] = base
+    #     self._type: str = type
+    #     self._original_text: str = original_text
+    #     self._changed = False
+    #     self._workspace = None
+    #     self._file = None
+    #     self._initialized = True
 
     def __repr__(self):
         return (
@@ -146,7 +171,7 @@ class TerraformObject(object):
             return self.render()
 
     def render(self, variables=None):
-        from pyterraformer.parser.generics import StringLit, Literal
+        from pyterraformer.parser import StringLit, Literal
 
         variables = variables or {}
         final = {}
@@ -167,7 +192,7 @@ class TerraformObject(object):
         return self.template.render(**output, render_attributes=output, **variables)
 
     def resolve_item(self, item):
-        from pyterraformer.parser.generics import Variable
+        from pyterraformer.parser import Variable
 
         if isinstance(item, list):
             resolved = [self.resolve_item(sub_item) for sub_item in item]

@@ -1,12 +1,11 @@
-from analytics_terraformer_core.base_objects import (
+from pyterraformer.core.objects import (
     TerraformObject,
-    Block,
-    Literal,
     process_attribute,
 )
 
 
-from analytics_terraformer_core.generics.backend import Backend
+
+from pyterraformer.core.generics.backend import Backend
 
 
 class TerraformConfig(TerraformObject):
@@ -21,6 +20,11 @@ class TerraformConfig(TerraformObject):
         )
 
     def render(self, variables=None):
+        from pyterraformer.core.generics import (
+            Block,
+            Literal,
+        )
+
         output = {
             "required_version": self.required_version,
             "backend": Block([Literal(backend.render()) for backend in self.backends]),

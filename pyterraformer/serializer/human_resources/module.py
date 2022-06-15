@@ -1,6 +1,6 @@
 from typing import List
-from analytics_terraformer_core.base_objects import TerraformObject, process_attribute
-from analytics_terraformer_core.base_objects import Literal
+from pyterraformer.core.objects import TerraformObject, process_attribute
+from pyterraformer.core.objects import Literal
 
 
 class BaseModule(TerraformObject):
@@ -73,7 +73,7 @@ class BaseModule(TerraformObject):
         )
 
     def interpolation_property(self, property: str):
-        from analytics_terraformer_core.base_objects import Literal
+        from pyterraformer.core.objects import Literal
 
         return Literal(f"${{module.{self.id}.{property}}}")
 

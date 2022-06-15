@@ -1,44 +1,35 @@
 import os
 import re
-import tempfile
+from typing import Optional, TYPE_CHECKING
 from collections import defaultdict
 from fnmatch import fnmatch
-from pathlib import Path
-from subprocess import CalledProcessError, run as sub_run
-from typing import Dict, List, Union, Iterator, Any
+from pathlib import Path, PurePath
+from typing import Dict, List, Union, Any
 from pyterraformer.terraform import Terraform
-from pyterraformer.serializer import
+from pyterraformer.core.utility import get_root
 
-import jinja2
-from analytics_utility_core.decorators import lazy_property
-from analytics_utility_core.secrets import secret_store
+# from analytics_terraformer_core.constants import (
+#     TERRAFORM_PATH,
+#     BASE_TERRAFORM_VERSION,
+#     BASE_CI_TERRAFORM_VERSION,
+#     BASE_GOOGLE_VERSION,
+#     BASE_NULL_VERSION,
+#     TEMPLATE_PATH,
+#     TERRAFORM_BIN_PATH,
+#     STATE_BUCKET,
+#     TERRAFORM_SA
+# )
+from pyterraformer.exceptions import ValidationError
+from pyterraformer.core.generics import Literal, Block
+from pyterraformer.parser import BaseParser
+if TYPE_CHECKING:
+    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
+    from pyterraformer.core.generics.variables import Variable
 
-from analytics_terraformer_core.constants import (
-    TERRAFORM_PATH,
-    BASE_TERRAFORM_VERSION,
-    BASE_CI_TERRAFORM_VERSION,
-    BASE_GOOGLE_VERSION,
-    BASE_NULL_VERSION,
-    TEMPLATE_PATH,
-    TERRAFORM_BIN_PATH,
-    STATE_BUCKET,
-    TERRAFORM_SA_DEV,
-    TERRAFORM_SA
-)
-from analytics_terraformer_core.exceptions import ValidationError, TerraformApplicationError
-from analytics_terraformer_core.meta_classes import Literal, Block
-from analytics_terraformer_core.workflows.enums import ExecutionMode
-
-template_loader = jinja2.FileSystemLoader(searchpath=TEMPLATE_PATH)
-env = jinja2.Environment(loader=template_loader, autoescape=True, keep_trailing_newline=True)
 
 DEFAULT_EXTRACTOR = re.compile('\s+([A-z]+)\s+=\s+"(.*?)(?<!\[)"(?!\])')
-
-DEFAULT_PROVIDER_ACCOUNT = 'file("./credentials/terraform-${terraform.workspace}@wf-gcp-gb-ae-support-prod.iam.gserviceaccount.com.json")'
-
-
 def process_attribute(input: Any, level=0):
-    from analytics_terraformer_core.generics import Variable
+    from pyterraformer.core.generics import Variable
 
     # if isinstance(input, Block):
     #     input = {input.name: input._keys}
@@ -65,41 +56,14 @@ def process_attribute(input: Any, level=0):
     return output
 
 
-def splitall(path: str) -> Iterator[str]:
-    out: List[str] = []
-    while True:
-        base, end = os.path.split(path)
-        if base and end:
-            out.append(end)
-        else:
-            out.append(base)
-            break
-        path = base
-    return reversed(out)
 
-
-def get_root(path: str, breaker: Union[str, List[str]] = None):
-    if isinstance(breaker, str):
-        breaker = [breaker]
-    elif not breaker:
-        breaker = ["terraform", "terraform-local-cache"]
-    else:
-        breaker = breaker
-    parts = splitall(path)
-    base = []
-    for item in parts:
-        base.append(item)
-        if item.lower() in breaker:
-            break
-    joined = os.path.join(*base)
-    return str(Path(os.path.relpath(path, joined)).as_posix())
 
 
 class TerraformObject(object):
     extractors: Dict[str, str] = {}
 
     def __init__(self, type, original_text, attributes):
-        from analytics_terraformer_core.generics import Block
+        from pyterraformer.core.generics import Block
 
         self.render_variables: Dict[str, str] = {}
         self.attributes = attributes or []
@@ -116,14 +80,6 @@ class TerraformObject(object):
         self._changed = False
         self._workspace = None
         self._file = None
-        # for key, extractor in self.extractors.items():
-        #     match = re.findall(extractor, self._original_text, re.DOTALL)
-        #     if match:
-        #         self.render_variables[key] = match[0]
-        # defaults = DEFAULT_EXTRACTOR.findall(self._original_text, re.DOTALL)
-        # for val in defaults:
-        #     if val[0] not in self.render_variables:
-        #         self.render_variables[val[0]] = val[1]
         self._initialized = True
 
     def __repr__(self):
@@ -195,19 +151,6 @@ class TerraformObject(object):
     def changed(self):
         return self._original_text and not self._changed
 
-    @lazy_property
-    def template(self):
-        try:
-            out = env.get_template(f"{self._type}.tf")
-            if not out:
-                raise ValueError(f"could not get template {self._type}")
-            return env.get_template(f"{self._type}.tf")
-        except Exception as e:
-            return env.get_template(f"generic.tf")
-
-    @lazy_property
-    def variables(self):
-        return env.parse(env.loader.get_source(env, f"{self._type}.tf")[0])
 
     @property
     def text(self):
@@ -217,7 +160,7 @@ class TerraformObject(object):
             return self.render()
 
     def render(self, variables=None):
-        from analytics_terraformer_core.generics import StringLit
+        from pyterraformer.core.generics import StringLit
 
         variables = variables or {}
         final = {}
@@ -238,8 +181,7 @@ class TerraformObject(object):
         return self.template.render(**output, render_attributes=output, **variables)
 
     def resolve_item(self, item):
-        from analytics_terraformer_core.generics import Variable
-
+        from pyterraformer.core.generics import Variable
         if isinstance(item, list):
             resolved = [self.resolve_item(sub_item) for sub_item in item]
         elif isinstance(item, str):
@@ -265,15 +207,18 @@ class TerraformObject(object):
 
 
 class LazyFile(object):
-    def __init__(self, file, parent):
+    def __init__(self, file:str, parent:"TerraformWorkspace"):
         self.file = file
-        self.parent = parent
+        self.parent:"TerraformWorkspace" = parent
         self.name = os.path.basename(file)
 
     def resolve(self):
-        from analytics_terraformer_core.parser import parse_file
-
-        return parse_file(self.file, self.parent)
+        if not self.parent.parser:
+            raise ValueError('No parser provided to look at files in this workspace')
+        return self.parent.parser.parse_file(self.file, self.parent)
+        # from analytics_terraformer_core.parser import parse_file
+        #
+        # return parse_file(self.file, self.parent)
 
 
 class LazyFileDict(dict):
@@ -311,97 +256,29 @@ def extract_errors(input: str):
 
 
 class TerraformWorkspace(object):
-    def __init__(self, path: str, terraform:Terraform):
-        from pyterraformer.parser.generics.variables import Variable
+    def __init__(self, path: Union[str, PurePath], terraform:Terraform, parser:Optional[BaseParser]=None, files:Optional[List["TerraformFile"]]= None,
+                 children:Optional[List["TerraformWorkspace"]] = None):
+
         self.terraform = terraform
-        self.path = path
+        self.path = str(path)
         self._path = Path(self.path)
         self.files: Dict[str, TerraformFile] = LazyFileDict()
-        self.children: List[TerraformWorkspace] = []
+        if files:
+            for file in files:
+                self.files[file.name] = files
+        self.children: List[TerraformWorkspace] = children or []
         self.name = self._path.stem
-        self.variables: Dict[str, Variable] = {}
+        self.variables: Dict[str, "Variable"] = {}
         self.data: List = []
+        self.parser=  parser
 
     def init(self):
-        from pyterraformer.parser.generics import Provider, TerraformConfig, Backend
         from os import makedirs
 
         makedirs(self.path, exist_ok=True)
         terraform = TerraformFile(self, "", self._path / "terraform.tf")
 
         return self
-    #
-    # def apply(self, workspace: str = None):
-    #     # default to the local workspace
-    #     workspace = workspace or self.env or "prod"
-    #     from analytics_terraformer_core.generics import TerraformConfig
-    #
-    #     if self._applied:
-    #         return None
-    #     if workspace == "dev":
-    #         creds = secret_store[TERRAFORM_SA_DEV]
-    #     else:
-    #         creds = secret_store[TERRAFORM_SA]
-    #     # temporary override for VPC work
-    #     # creds = secret_store["eden-terraform-sa"]
-    #     state_config = self.files["terraform.tf"]
-    #     for obj in state_config.objects:
-    #         # this handling can be cleaned up after all existing paths have been fixed
-    #         # but provides backwards compatibility with the initial [incorrect] state sitch
-    #         if isinstance(obj, TerraformConfig):
-    #             obj.backends[0].prefix = f"terraform/state/{self.terraform_path}"
-    #             if "encryption_key" in obj.backends[0].render_variables:
-    #                 del obj.backends[0].render_variables["encryption_key"]
-    #             obj._changed = True
-    #     changed = state_config.save()
-    #     if not changed:
-    #         raise ValueError
-    #     with tempfile.TemporaryDirectory() as tmpdirname:
-    #         secrets = os.path.join(tmpdirname, "keyfile.json")
-    #         with open(secrets, "w") as f:
-    #             f.write(creds)
-    #         key_path = os.path.join(tmpdirname, "tmpssh")
-    #         with open(key_path, "w") as keyfile:
-    #             lines = secret_store["ssh_identity"].replace("|", "\n")
-    #             keyfile.write(lines)
-    #         os.chmod(key_path, 0o600)
-    #         ssh_cmd = "ssh -i %s -o StrictHostKeyChecking=no" % keyfile.name.replace("\\", "\\\\")
-    #
-    #         my_env = os.environ.copy()
-    #         my_env["GOOGLE_APPLICATION_CREDENTIALS"] = secrets
-    #         my_env["GOOGLE_ENCRYPTION_KEY"] = secret_store["gcs_terraform_encryption_key"]
-    #         my_env["TF_PLUG_CACHE_DIR"] = TERRAFORM_BIN_PATH
-    #         my_env["TF_PLUGIN_CACHE_DIR"] = TERRAFORM_BIN_PATH
-    #         my_env["GIT_SSH_COMMAND"] = ssh_cmd
-    #
-    #         run_cmd = lambda cmd: sub_run(
-    #             cmd, cwd=self.path, env=my_env, check=True, capture_output=True, encoding="utf-8"
-    #         ).stdout
-    #
-    #         try:
-    #             # init, then list workspaces
-    #             for cmd in [[TERRAFORM_PATH, "init"], [TERRAFORM_PATH, "workspace", "list"]]:
-    #                 check = run_cmd(cmd)
-    #             # create workspace if required
-    #             if workspace not in check:
-    #                 run_cmd([TERRAFORM_PATH, "workspace", "new", workspace])
-    #             # then select, plan, and apply
-    #             # 4/23 removed [TERRAFORM_PATH, "plan"] step - redundant
-    #
-    #             for cmd in [
-    #                 [TERRAFORM_PATH, "workspace", "select", workspace],
-    #                 # [TERRAFORM_PATH, "import", "google_access_context_manager_service_perimeter.eden_dev_perimeter",
-    #                 #  'accessPolicies/273592504183/servicePerimeters/eden_dev_service_perimeter'],
-    #                 # [TERRAFORM_PATH, "plan"],
-    #                 [TERRAFORM_PATH, "apply", "-auto-approve"],
-    #             ]:
-    #                 run = run_cmd(cmd)
-    #             self._applied = True
-    #             print(run)
-    #         except CalledProcessError as e:
-    #             errors = extract_errors(e.stderr)
-    #             raise TerraformApplicationError(errors)
-    #     return str(run)
 
     @property
     def terraform_path(self):
@@ -416,20 +293,17 @@ class TerraformWorkspace(object):
             self.files[name] = TerraformFile(self, name, os.path.join(self.path, name))
         return self.files[name]
 
-    def add_file(self, file, new=True):
-        from pyterraformer.parser import parse_file
-
-        if isinstance(file, str) and not file.endswith("variables.tf"):
-            nfile = LazyFile(file, self)
+    def add_file(self, file:Union["TerraformNamespace", PurePath,str])->"TerraformFile":
+        from pyterraformer.core.namespace import TerraformNamespace, TerraformFile
+        if isinstance(file, TerraformNamespace):
+            self.files[file.name] = file
+            return file
+        elif file in self.files:
+            return self.files[file]
+        else:
+            nfile = TerraformFile(workspace=self, text='', location=file )
             self.files[nfile.name] = nfile
-            return
-        elif isinstance(file, str):
-            parsed = parse_file(file, self)
-            self.files[parsed.name] = parsed
-            return
-        if new:
-            file.changed = True
-        self.files[file.name] = file
+            return nfile
 
     def add_child_workspace(self, path, escalate_failure=True):
         from analytics_terraformer_core.parser import parse_workspace

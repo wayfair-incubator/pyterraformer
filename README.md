@@ -1,62 +1,129 @@
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/wayfair-incubator/pyterraformer/LICENSE)
+[![PyPI](https://img.shields.io/pypi/v/pyterraformer.svg)](https://pypi.org/project/pyterraformer/)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pyterraformer.svg)](https://pypi.python.org/pypi/pyterraformer)
+[![Downloads](https://img.shields.io/badge/dynamic/json.svg?label=downloads&url=https%3A%2F%2Fpypistats.org%2Fapi%2Fpackages%2Fpyterraformer%2Frecent&query=data.last_month&colorB=brightgreen&suffix=%2FMonth)](https://pypistats.org/packages/pyterraformer)
+
+
 # OSPO Project Template
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
 ## About The Project
 
-Provide some information about what the project is/does.
+Pyterraform is a library for reading, modifying, and writing *human readable terraform code*. This is in contrast 
+to libraries such as the excellent [pyhcl2](https://github.com/amplify-education/python-hcl2), which don't support
+writing back in the human format.
 
+Specifically, this library would enable reading this string
 
-## Getting Started
+```terraform
+resource "aws_s3_bucket" "b" {
+  bucket = "my-tf-test-bucket"
 
-To get a local copy up and running follow these simple steps.
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+```
 
+into python, directly modifying the tags, and writing it back.
 
-### Prerequisites
+Let's take a look.
 
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
+```python
+from pyterraformer import HumanSerializer
+
+hs = HumanSerializer(terraform='/path/to/my/terraform/binary')
+
+example_string = '''resource "aws_s3_bucket" "b" {
+  bucket = "my-tf-test-bucket"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}'''
+
+# parse a string into a list of terraform objects
+namespace = hs.parse_string(example_string)
+
+# get the bucket from that list
+bucket = namespace.objects[0]
+
+# modify the bucket
+bucket.tags["Environment"] = "Prod"
+bucket.bucket = 'my-updated-bucket'
+
+# and write the modified namespace back
+# formatting requires a valid terraform binary to be provided
+updated = hs.write_namespace(namespace, format=True)
+
+assert updated == '''resource "aws_s3_bucket" "b" {
+  bucket = "my-updated-bucket"
+
+  tags = {
+    Name        = "My bucket"
+    Environment = "Prod"
+  }
+}
+'''
+
+```
+
+It is useful for any of the following.
+
+- bulk generation of human readable terraform code
+- large scale refactoring
+- process automation, since as CI
+- accessing the power of Terraform directly from python
+- introspecting a terraform repo to collect information
+- and more!
+
+Read the [documentation](https://pyterraformer.readthedocs.io/en/latest/) to discover more, including how to work with
+directories, files, apply terraform directly, and get IDE auto-completion. 
 
 ### Installation
 
-1. Clone the repo
-   ```sh
-   git clone https://github.com/org_name/repo_name.git
-   ```
-2. Install NPM packages
-   ```sh
-   npm install
-   ```
+`pyterraformer` is [hosted on PyPI](https://pypi.org/project/pyterraformer/), and is installable with [pip](https://pip.pypa.io/en/stable/):
 
+```sh
+pip install pyterraformer
+```
 
-## Usage
+Typed classes for IDE autocomplete and validation [if available] can be installed under the package name pytf-[provider-owner]-[provider-name]
 
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
+```sh
+pip install pytf-hashicorp-aws
 
-_For more examples, please refer to the [Documentation](https://example.com) or the [Wiki](https://github.com/org_name/repo_name/wiki)_
+```
 
+And then imported in the following way
+
+```python
+from pyterraformer.providers.hashicorp.aws import aws_s3_bucket
+
+```
+
+## Documentation
+
+Primary documentation is on [Read the Docs](https://pyterraformer.readthedocs.io/en/latest/)
 
 ## Roadmap
 
 See the [open issues](https://github.com/org_name/repo_name/issues) for a list of proposed features (and known issues).
 
-
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. For detailed contributing guidelines, please see [CONTRIBUTING.md](CONTRIBUTING.md)
 
-
 ## License
 
-Distributed under the `<License name>` License. See `LICENSE` for more information.
+Distributed under the `MIT License` License. See `LICENSE` for more information.
 
 
 ## Contact
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email
 
 Project Link: [https://github.com/org_name/repo_name](https://github.com/org_name/repo_name)
 
