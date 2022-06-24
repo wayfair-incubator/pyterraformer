@@ -1,4 +1,3 @@
-
 from pyterraformer.core.objects import TerraformObject
 
 
@@ -25,14 +24,17 @@ class Variable(TerraformObject):
 
     def render_lookup(self, item):
         from pyterraformer.core.generics import Literal
+
         return Literal(f'var.{self.name}["{item}"]')
 
     def render_attribute(self, item):
         from pyterraformer.core.generics import Literal
+
         return Literal(f"var.{self.name}.{item}")
 
     def render_basic(self):
         from pyterraformer.core.generics import Literal
+
         return Literal(f"var.{self.name}")
 
     def get(self, val, fallback=None):
@@ -41,14 +43,13 @@ class Variable(TerraformObject):
                 return item
         return fallback
 
-
     def get_type(self, val):
         from pyterraformer.core.generics.interpolation import String
         from pyterraformer.core.generics import Literal, StringLit
 
         if isinstance(val, list):
             if not val:
-                return Literal(f"list(any)")
+                return Literal("list(any)")
             return Literal(f"list({self.get_type(val[0]).value})")
         elif isinstance(val, dict):
             out = set()
@@ -57,7 +58,7 @@ class Variable(TerraformObject):
             out = list(out)
             if len(out) == 1:
                 return Literal(f"map({out[0]})")
-            return Literal(f"map(any)")
+            return Literal("map(any)")
         elif isinstance(val, set):
             return Literal(f"set({self.get_type(next(iter(val))).value})")
         elif isinstance(val, str):

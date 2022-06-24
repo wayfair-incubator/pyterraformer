@@ -1,47 +1,34 @@
-from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
+from typing import Dict, Any, List, Optional, TYPE_CHECKING
+
 from pyterraformer.exceptions import ValidationError
-from pyterraformer.serializer.load_templates import env
-from pyterraformer.utility.decorators import lazy_property
 
+if TYPE_CHECKING:
+    from pyterraformer.core.namespace import TerraformNamespace
 
-def process_attribute(input: Any):
-    from pyterraformer.core.generics import Variable, Literal, Block
-
-    if not isinstance(input, dict):
-        return input
-    output = {}
-    for key, item in input.items():
-        if isinstance(item, Variable):
-            output[key] = item.render_basic()
-        elif isinstance(item, Literal):
-            output[key] = item
-        elif isinstance(item, Block):
-            for idx, sub_item in enumerate(item):
-                output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
-        elif isinstance(item, dict):
-            output[key] = process_attribute(item)
-        elif isinstance(item, List):
-            output[key] = [process_attribute(sub_item) for sub_item in item]
-        else:
-            output[key] = item
-    return output
 
 @dataclass
 class ObjectMetadata:
-    source_file:Optional[str] = None
-    orig_text:Optional[str] = None
+    source_file: Optional[str] = None
+    orig_text: Optional[str] = None
+    row_num: Optional[int] = None
+
 
 class TerraformObject(object):
-
     def __init__(
-            self, type, id:Optional[str]=None, metadata:Optional[ObjectMetadata]=None, **kwargs
+        self,
+        type,
+        id: Optional[str] = None,
+        metadata: Optional[ObjectMetadata] = None,
+        **kwargs,
     ):
 
         self.metadata = metadata or ObjectMetadata()
         self.id = id
         arguments = kwargs or {}
-        self.render_variables: Dict[str, str] = {str(key):value for key, value in arguments.items()}
+        self.render_variables: Dict[str, str] = {
+            str(key): value for key, value in arguments.items()
+        }
         # for attribute in self.attributes:
         #     if isinstance(attribute, list):
         #         # always cast keys to string
@@ -51,32 +38,10 @@ class TerraformObject(object):
         #         base.append(attribute)
         #         self.render_variables[attribute.name] = base
         self._type: str = type
-        self._changed = False
+        self._changed: bool = False
         self._workspace = None
-        self._file = None
-        self._initialized = True
-
-    # def __init__(
-    #     self, type, id:Optional[str]=None, original_text: Optional[str]=None, attributes: Optional[List] = None
-    # ):
-    #     from pyterraformer.core.generics import Block
-    #
-    #     self.render_variables: Dict[str, str] = {}
-    #     self.attributes = attributes or []
-    #     for attribute in self.attributes:
-    #         if isinstance(attribute, list):
-    #             # always cast keys to string
-    #             self.render_variables[str(attribute[0])] = attribute[1]
-    #         elif isinstance(attribute, Block):
-    #             base = self.render_variables.get(attribute.name, Block())
-    #             base.append(attribute)
-    #             self.render_variables[attribute.name] = base
-    #     self._type: str = type
-    #     self._original_text: str = original_text
-    #     self._changed = False
-    #     self._workspace = None
-    #     self._file = None
-    #     self._initialized = True
+        self._file: Optional["TerraformNamespace"] = None
+        self._initialized: bool = True
 
     def __repr__(self):
         return (
@@ -123,8 +88,7 @@ class TerraformObject(object):
         We want any new attribute set on a base class to get rendered...
         Unless it's one of the internal attributes we use for managing objects.
         So skip anything with a private method, or in the disallow list...
-        Unless it's also in the list of things that we should render.
-        Woof."""
+        Unless it's also in the list of things that we should render."""
         if name.startswith("_") or (
             name in ("row_num", "template", "name", "id")
             and not (self.render_variables and name in self.render_variables)
@@ -149,50 +113,8 @@ class TerraformObject(object):
     def changed(self):
         return self._original_text and not self._changed
 
-    @lazy_property
-    def template(self):
-        try:
-            out = env.get_template(f"{self._type}.tf")
-            if not out:
-                raise ValueError(f"could not get template {self._type}")
-            return env.get_template(f"{self._type}.tf")
-        except Exception as e:
-            return env.get_template(f"generic.tf")
-
-    @lazy_property
-    def variables(self):
-        return env.parse(env.get_template(f"{self._type}.tf")[0])
-
-    @property
-    def text(self):
-        if not self._changed and self._original_text:
-            return self._original_text
-        else:
-            return self.render()
-
-    def render(self, variables=None):
-        from pyterraformer.parser import StringLit, Literal
-
-        variables = variables or {}
-        final = {}
-        for key, item in self.render_variables.items():
-            if (
-                isinstance(item, StringLit)
-                and len(item.contents) == 1
-                and str(item).startswith('"${')
-                and str(item).endswith('$}"')
-            ):
-                item = str(item)[3:-3]
-                final[key] = Literal(item)
-            else:
-                final[key] = item
-        output = process_attribute(final)
-        if not self.template:
-            raise ValueError(self._type + self._original_text)
-        return self.template.render(**output, render_attributes=output, **variables)
-
     def resolve_item(self, item):
-        from pyterraformer.parser import Variable
+        from pyterraformer.core.generics import Variable
 
         if isinstance(item, list):
             resolved = [self.resolve_item(sub_item) for sub_item in item]

@@ -1,10 +1,8 @@
-from typing import List
-from pyterraformer.core.objects import TerraformObject, process_attribute
 from pyterraformer.core.generics import Literal
+from pyterraformer.core.objects import TerraformObject
 
 
 class ModuleObject(TerraformObject):
-
     def __init__(self, text, name, attributes):
         self._name = str(name).replace('"', "")
         self.id = self._name
@@ -45,33 +43,33 @@ class ModuleObject(TerraformObject):
                     raise ValueError(f"Missing required attribute {attribute}")
         return cls(name=id, text=None, attributes=attributes)
 
-    def render(self, variables=None):
-        from analytics_terraformer_core.utility import clean_render_dictionary
-        from analytics_terraformer_core.generics import Variable
-
-        variables = variables or {}
-        final = {}
-        priority_attributes = self.REQUIRED_ATTRIBUTES + self.PRIORITY_ATTRIBUTES
-        for val in priority_attributes:
-            test = self.render_variables.get(val)
-            if test:
-                final[val] = test
-        for key in sorted(self.render_variables.keys()):
-            if key in "version":
-                continue
-            if key not in final:
-                final[key] = self.render_variables[key]
-        for key, item in final.items():
-            if isinstance(item, Variable):
-                final[key] = item.render_basic()
-        final = clean_render_dictionary(final, [])
-        processed = process_attribute(final)
-        return self.template.render(
-            render_attributes=processed, name=self._name, **variables
-        )
+    # def render(self, variables=None):
+    #     from analytics_terraformer_core.utility import clean_render_dictionary
+    #     from analytics_terraformer_core.generics import Variable
+    #
+    #     variables = variables or {}
+    #     final = {}
+    #     priority_attributes = self.REQUIRED_ATTRIBUTES + self.PRIORITY_ATTRIBUTES
+    #     for val in priority_attributes:
+    #         test = self.render_variables.get(val)
+    #         if test:
+    #             final[val] = test
+    #     for key in sorted(self.render_variables.keys()):
+    #         if key in "version":
+    #             continue
+    #         if key not in final:
+    #             final[key] = self.render_variables[key]
+    #     for key, item in final.items():
+    #         if isinstance(item, Variable):
+    #             final[key] = item.render_basic()
+    #     final = clean_render_dictionary(final, [])
+    #     processed = process_attribute(final)
+    #     return self.template.render(
+    #         render_attributes=processed, name=self._name, **variables
+    #     )
 
     def interpolation_property(self, property: str):
-        from pyterraformer.core.objects import Literal
+        from pyterraformer.core.generics import Literal
 
         return Literal(f"${{module.{self.id}.{property}}}")
 

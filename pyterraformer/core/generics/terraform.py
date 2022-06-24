@@ -1,11 +1,5 @@
-from pyterraformer.core.objects import (
-    TerraformObject,
-    process_attribute,
-)
-
-
-
 from pyterraformer.core.generics.backend import Backend
+from pyterraformer.core.objects import TerraformObject
 
 
 class TerraformConfig(TerraformObject):
@@ -19,15 +13,12 @@ class TerraformConfig(TerraformObject):
             [obj for obj in attributes if not isinstance(obj, Backend)],
         )
 
-    def render(self, variables=None):
-        from pyterraformer.core.generics import (
-            Block,
-            Literal,
-        )
-
-        output = {
-            "required_version": self.required_version,
-            "backend": Block([Literal(backend.render()) for backend in self.backends]),
-        }
-        final = process_attribute(output)
-        return self.template.render(render_attributes=final)
+    # def render(self, variables=None):
+    #     from pyterraformer.core.generics import Block, Literal
+    #
+    #     output = {
+    #         "required_version": self.required_version,
+    #         "backend": Block([Literal(backend.render()) for backend in self.backends]),
+    #     }
+    #     final = process_attribute(output)
+    #     return self.template.render(render_attributes=final)

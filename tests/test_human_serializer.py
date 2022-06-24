@@ -12,14 +12,30 @@ def test_human_serialization():
         Name        = "My bucket"
         Environment = "Dev"
       }
+    }
+    
+    resource "aws_s3_bucket" "b2" {
+      bucket = "my-tf-test-bucket"
+    
+      tags = {
+        Name        = "My bucket"
+        Environment = "Dev"
+      }
     }'''
     bucket = hs.parse_string(example_string)[0]
 
     bucket.tags["Environment"] = "Prod"
     bucket.bucket = 'my-updated-bucket'
 
-    # and written back to a string
-    # formatting requires a valid terraform binary to be provided
-    updated = hs.write_object(bucket)
+    test_string =  '''resource "aws_s3_bucket" "b" {
+      bucket = "my-updated-bucket"
+    
+      tags = {
+        Name        = "My bucket"
+        Environment = "Prod"
+      }
+    }'''
 
-    assert standard_string(updated) == standard_string(example_string)
+    updated = hs.render_object(bucket)
+
+    assert standard_string(updated) == standard_string(test_string)

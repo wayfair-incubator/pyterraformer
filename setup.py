@@ -26,7 +26,7 @@ setuptools.setup(
     long_description=open("README.md").read(),
     packages=setuptools.find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
     package_data={
-        "": ["*.tf", "*.jinja"]
+        "pygsuite": ["*.tf", "*.jinja", "py.typed"],
     },
     install_requires=install_requires,
     classifiers=[
@@ -35,5 +35,7 @@ setuptools.setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
     ],
 )

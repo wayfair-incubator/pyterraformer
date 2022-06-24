@@ -1,5 +1,10 @@
-from .workspace import TerraformWorkspace
-from .objects import TerraformObject
 from .namespace import TerraformNamespace, TerraformFile
+from .objects import TerraformObject
+from .workspace import TerraformWorkspace
 
-__all__ = ["TerraformObject", "TerraformWorkspace", "TerraformFile", "TerraformNamespace"]
+__all__ = [
+    "TerraformObject",
+    "TerraformWorkspace",
+    "TerraformFile",
+    "TerraformNamespace",
+]

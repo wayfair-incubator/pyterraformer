@@ -24,9 +24,9 @@ from typing import Any, Optional, List, TYPE_CHECKING
 
 
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile
+    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
     from pyterraformer.core.workspace import TerraformWorkspace
-    from pyterraformer.core.objects import TerraformObject
+
 
 @dataclass
 class UnresolvedLookup:
@@ -136,7 +136,10 @@ class VariableLookupInstantiator(Resolvable):
 
 class TerraformLookupInstantiator(Resolvable):
     def __init__(self, workspace: "TerraformWorkspace"):
-        self.workspace = workspace.env
+        if workspace.terraform:
+            self.workspace = workspace.terraform.workspace
+        else:
+            self.workspace = "undefined"
 
 
 class LocalLookupInstantiator(Resolvable):
@@ -224,7 +227,7 @@ class ArrayLookup(Resolvable):
 
 
 class PropertyLookup(Resolvable):
-    def __init__(self, base, attributes:Optional[List]=None):
+    def __init__(self, base, attributes: List):
         self.base = base
         self.contents = attributes
         self.property = attributes[0]
@@ -232,7 +235,13 @@ class PropertyLookup(Resolvable):
     def __repr__(self):
         return "{}.{}".format(self.base.__repr__(), self.property.__repr__())
 
-    def resolve(self, workspace, file, parent=None, parent_instance=None):
+    def resolve(
+        self,
+        workspace: "TerraformWorkspace",
+        file: "TerraformFile",
+        parent: Optional[Resolvable] = None,
+        parent_instance: Optional[Resolvable] = None,
+    ):
 
         anchor = parent or self.base
         if self.base == "module":
@@ -244,7 +253,7 @@ class PropertyLookup(Resolvable):
         elif self.base == "data":
             anchor = DataLookupInstantiator(workspace)
         elif self.base == "locals":
-            anchor = LocalLookupInstantiator(workspace)
+            anchor = LocalLookupInstantiator(file)
         elif self.base == "count":
             anchor = CountLookupInstantiator()
         elif not parent:

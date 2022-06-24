@@ -18,23 +18,24 @@ class Data(TerraformObject):
             + ")"
         )
 
-    def render(self, variables=None):
-        variables = variables or {}
-        final = {}
-        for key in sorted(self.render_variables.keys()):
-            if key not in final and key != "type":
-                final[key] = self.render_variables[key]
-
-        for key, item in final.items():
-            if (
-                isinstance(item, str)
-                and item.startswith('"${')
-                and item.endswith('$}"')
-            ):
-                item = item[3:-3]
-                final[key] = Literal(item)
-
-        output = process_attribute(final)
-        return self.template.render(
-            name=self.name, type=self.type, render_attributes=output, **variables
-        )
+    #
+    # def render(self, variables=None):
+    #     variables = variables or {}
+    #     final = {}
+    #     for key in sorted(self.render_variables.keys()):
+    #         if key not in final and key != "type":
+    #             final[key] = self.render_variables[key]
+    #
+    #     for key, item in final.items():
+    #         if (
+    #             isinstance(item, str)
+    #             and item.startswith('"${')
+    #             and item.endswith('$}"')
+    #         ):
+    #             item = item[3:-3]
+    #             final[key] = Literal(item)
+    #
+    #     output = process_attribute(final)
+    #     return self.template.render(
+    #         name=self.name, type=self.type, render_attributes=output, **variables
+    #     )

@@ -1,6 +1,6 @@
 # from analytics_utility_core.decorators import lazy_property
 
-from pyterraformer.core.objects import TerraformObject, process_attribute
+from pyterraformer.core.objects import TerraformObject
 
 
 class Provider(TerraformObject):
@@ -17,16 +17,15 @@ class Provider(TerraformObject):
             + ")"
         )
 
-
-    def render(self, variables=None):
-        # from analytics_terraformer_core.utility import clean_render_dictionary
-
-        variables = variables or {}
-        variables["type"] = self.ptype
-
-        # final = clean_render_dictionary(self.render_variables, [])
-        output = process_attribute(self.render_variables)
-        return self.template.render(render_attributes=output, **variables)
+    # def render(self, variables=None):
+    #     # from analytics_terraformer_core.utility import clean_render_dictionary
+    #
+    #     variables = variables or {}
+    #     variables["type"] = self.ptype
+    #
+    #     # final = clean_render_dictionary(self.render_variables, [])
+    #     output = process_attribute(self.render_variables)
+    #     return self.template.render(render_attributes=output, **variables)
 
 
 class Lifecycle(TerraformObject):

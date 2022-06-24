@@ -13,7 +13,6 @@ from .interpolation import (
     BinaryOperator,
     BinaryTerm,
     Parenthetical,
-    Block,
     File,
     Boolean,
     Merge,
@@ -26,11 +25,11 @@ from .interpolation import (
     LegacySplat,
     ToSet,
 )
+from .literal import Literal
 from .local import Local
 from .meta_arguments import DependsOn, Provider, ForEach, Count, Lifecycle
 from .metadata import Metadata
 from .output import Output
 from .terraform import TerraformConfig
-from .variables import Variable
-from .literal import Literal
 from .terraform_block import Block
+from .variables import Variable

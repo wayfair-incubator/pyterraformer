@@ -1,5 +1,6 @@
 from lark import Lark, Transformer, v_args, Tree
 from lark.tree import Meta
+from typing import Dict
 
 from pyterraformer.core.generics import (
     Comment,
@@ -34,10 +35,11 @@ from pyterraformer.core.generics import (
     Symlink,
     ToSet,
 )
-from pyterraformer.core.resources import ResourceObject
 from pyterraformer.core.modules import ModuleObject
-from pyterraformer.core.objects import ObjectMetadata
+
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
+
+RESOURCES_MAP: Dict = {}
 
 grammar = r"""
     start: (comment| item | symlink)*
@@ -210,7 +212,7 @@ class ParseToObjects(Transformer):
         Transformer.__init__(self, visit_tokens)
         self.text = text
 
-    def meta_to_text(self, meta:Meta):
+    def meta_to_text(self, meta: Meta):
         return self.text[meta.start_pos : meta.end_pos]
 
     def IDENTIFIER(self, args):
@@ -226,25 +228,33 @@ class ParseToObjects(Transformer):
         return int(args.value)
 
     @v_args(meta=True)
-    def resource(self, meta:Meta, args):
-        type, name = args[0:2]
+    def resource(self, meta: Meta, args):
+        from pyterraformer.core.resources import ResourceObject
+        from pyterraformer.core.objects import ObjectMetadata
 
-
-        out = RESOURCES_MAP[str(type).replace('"', "")](
-            name, str(type), self.meta_to_text(meta), args[2:]
+        metadata = ObjectMetadata(
+            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
         )
-        out.row_num = meta.start_pos
-        return out
+        type, name = args[0:2]
+        type = str(type).replace('"', "")
+        object_type = RESOURCES_MAP.get(type, ResourceObject)
+        object_type._type = type
+        # out = RESOURCES_MAP[str(type).replace('"', "")](
+        #     name, str(type), , args[2:]
+        # )
+        remaining = args[2:]
+        to_dict = {str(val): key for val, key in remaining}
+        return object_type(id=name, metadata=metadata, **to_dict)
 
     @v_args(meta=True)
-    def module(self, meta:Meta, args):
+    def module(self, meta: Meta, args):
         name = args[0]
         out = ModuleObject(self.meta_to_text(meta), name, args[1:])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def variable(self, meta:Meta, args):
+    def variable(self, meta: Meta, args):
         name = args[0]
         args = args[1:]
         out = Variable(self.meta_to_text(meta), name, args)
@@ -252,45 +262,45 @@ class ParseToObjects(Transformer):
         return out
 
     @v_args(meta=True)
-    def provider(self, meta:Meta, args):
+    def provider(self, meta: Meta, args):
         name = args[0]
         out = Provider(name, self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def metadata(self, meta:Meta, args):
+    def metadata(self, meta: Meta, args):
         out = TerraformConfig(self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def terraform(self, meta:Meta, args):
+    def terraform(self, meta: Meta, args):
         out = TerraformConfig(self.meta_to_text(meta), args)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def data(self, meta:Meta, args):
+    def data(self, meta: Meta, args):
         type, name = args[0:2]
         out = Data(name, type, self.meta_to_text(meta), args[2:])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def locals(self, meta:Meta, args):
+    def locals(self, meta: Meta, args):
         out = Local(self.meta_to_text(meta), args[0])
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def comment(self, meta:Meta, args):
+    def comment(self, meta: Meta, args):
         out = Comment(args[0].value)
         out.row_num = meta.start_pos
         return out
 
     @v_args(meta=True)
-    def multiline_comment(self, meta:Meta, args):
+    def multiline_comment(self, meta: Meta, args):
         base = args[0].value
         if len(args) > 1:
             base += args[1].value
@@ -327,6 +337,9 @@ class ParseToObjects(Transformer):
 
     def legacy_splat(self, args):
         return LegacySplat(args)
+
+    def start(self, args):
+        return list(args)
 
     def lookup(self, args):
         base = args[0]

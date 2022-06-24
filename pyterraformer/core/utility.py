@@ -1,7 +1,8 @@
 import os
+from fnmatch import fnmatch
 from pathlib import Path
 from typing import Iterator, List, Union
-from fnmatch import fnmatch
+
 
 def splitall(path: str) -> Iterator[str]:
     out: List[str] = []
@@ -31,6 +32,7 @@ def get_root(path: str, breaker: Union[str, List[str]] = None):
             break
     joined = os.path.join(*base)
     return str(Path(os.path.relpath(path, joined)).as_posix())
+
 
 def value_match(item, value) -> bool:
     if isinstance(value, str):
