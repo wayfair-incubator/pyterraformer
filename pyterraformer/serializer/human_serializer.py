@@ -2,10 +2,10 @@ from os.path import join, dirname
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Optional, Dict, Union, TYPE_CHECKING, Any, List
-
+from subprocess import CalledProcessError
 import jinja2
 
-
+from pyterraformer.constants import logger
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
 from pyterraformer.serializer.base_serializer import BaseSerializer
@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         TerraformNamespace,
         TerraformFile,
     )
+
 TEMPLATE_PATH = join(dirname(__file__), "templates")
 
 template_loader = jinja2.FileSystemLoader(searchpath=TEMPLATE_PATH)
@@ -72,6 +73,7 @@ class HumanSerializer(BaseSerializer):
         return parse_text(string)
 
     def parse_file(self, path: Union[str, Path], workspace: "TerraformWorkspace"):
+        from pyterraformer.core.namespace import TerraformFile
         with open(path, "r") as f:
             text = f.read()
             objects = self.parse_string(string=text)
@@ -86,7 +88,11 @@ class HumanSerializer(BaseSerializer):
             temp_dir = Path(td)
             file_name = temp_dir / "to_format.tf"
             file_name.write_text(string)
-            self.terraform.run("fmt", path=td)
+            try:
+                self.terraform.run("fmt", path=td)
+            except CalledProcessError as e:
+                logger.error(f'Unable to format file \n{string}')
+                raise e
             return file_name.open().read()
 
     def render_object(
@@ -94,6 +100,7 @@ class HumanSerializer(BaseSerializer):
     ) -> str:
         if format and not self.can_format:
             raise ValueError("No terraform executable configured, cannot format.")
+        from pyterraformer.core.generics import TerraformConfig
         format = format if format is not None else self.can_format
         variables = {}
         variables["id"] = object.id
@@ -102,8 +109,10 @@ class HumanSerializer(BaseSerializer):
         for key in sorted(object.render_variables.keys()):
             if key not in final:
                 final[key] = object.render_variables[key]
+        if isinstance(object, TerraformConfig):
+            template_name = 'terraform.tf'
 
-        if isinstance(object, ResourceObject):
+        elif isinstance(object, ResourceObject):
             template_name = "resource.tf"
         elif isinstance(object, ModuleObject):
             template_name = "module.tf"

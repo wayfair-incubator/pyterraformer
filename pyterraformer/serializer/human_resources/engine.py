@@ -2,6 +2,7 @@ from lark import Lark, Transformer, v_args, Tree
 from lark.tree import Meta
 from typing import Dict
 
+from pyterraformer.core.generics.interpolation import Block
 from pyterraformer.core.generics import (
     Comment,
     Variable,
@@ -23,7 +24,7 @@ from pyterraformer.core.generics import (
     Local,
     Parenthetical,
     LegacySplat,
-    Block,
+
     File,
     Boolean,
     Merge,
@@ -276,7 +277,18 @@ class ParseToObjects(Transformer):
 
     @v_args(meta=True)
     def terraform(self, meta: Meta, args):
-        out = TerraformConfig(self.meta_to_text(meta), args)
+        from pyterraformer.core.resources import ResourceObject
+        from pyterraformer.core.objects import ObjectMetadata
+        from pyterraformer.core.generics import Backend
+
+        metadata = ObjectMetadata(
+            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
+        )
+        backend = [obj for obj in args if isinstance(obj, Backend)]
+        kwargs = {}
+        if backend:
+            kwargs['backend'] = backend
+        out = TerraformConfig(metadata=metadata, **kwargs)
         out.row_num = meta.start_pos
         return out
 

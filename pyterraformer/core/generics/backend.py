@@ -1,11 +1,14 @@
-from pyterraformer.core.objects import TerraformObject
+from pyterraformer.core.objects import TerraformObject, ObjectMetadata
+from typing import Optional
 
 # from pyterraformer.core.resources import
 
 
 class Backend(TerraformObject):
-    def __init__(self, name, attributes):
-        TerraformObject.__init__(self, "backend", name, attributes=attributes)
+    def __init__(self, name:str,
+                 metadata: Optional[ObjectMetadata] = None,
+                 **kwargs,):
+        TerraformObject.__init__(self, "backend", metadata=metadata, **kwargs)
         self.name = str(name).replace('"', "")
 
     # def render(self, variables=None):

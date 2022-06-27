@@ -1,16 +1,18 @@
-from pyterraformer.core.generics.backend import Backend
-from pyterraformer.core.objects import TerraformObject
+from typing import Optional
+
+from pyterraformer.core.objects import TerraformObject, ObjectMetadata
 
 
 class TerraformConfig(TerraformObject):
-    def __init__(self, text, attributes):
-        attributes = attributes or []
-        self.backends = [obj for obj in attributes if isinstance(obj, Backend)]
+    def __init__(self,
+                 metadata: Optional[ObjectMetadata] = None,
+                 **kwargs, ):
+        # self.backends = [obj for obj in attributes if isinstance(obj, Backend)]
         TerraformObject.__init__(
             self,
             "terraform",
-            text,
-            [obj for obj in attributes if not isinstance(obj, Backend)],
+            metadata=metadata,
+            **kwargs
         )
 
     # def render(self, variables=None):

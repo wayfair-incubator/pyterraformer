@@ -21,7 +21,7 @@ class Terraform:
     def run(self, arguments: Union[str, List[str]], path: str):
 
         workspace = self._run(["workspace", "show"], path=path).strip()
-        logger.info(f"In workspace {workspace}, no changes required.")
+        logger.info(f"Executing {arguments} in workspace {workspace}.")
         if workspace != self.workspace:
             logger.info(f"swapping to configured workspace {workspace}")
             workspaces = [

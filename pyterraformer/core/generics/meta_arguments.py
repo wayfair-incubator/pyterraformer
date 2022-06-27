@@ -1,12 +1,16 @@
 # from analytics_utility_core.decorators import lazy_property
 
-from pyterraformer.core.objects import TerraformObject
+from typing import Optional
+from pyterraformer.core.objects import TerraformObject, ObjectMetadata
 
 
 class Provider(TerraformObject):
-    def __init__(self, ptype, text, attributes):
-        self.ptype = str(ptype).replace('"', "")
-        TerraformObject.__init__(self, "provider", text, attributes)
+    def __init__(self,
+                 type:str,
+                 metadata: Optional[ObjectMetadata] = None,
+                 **kwargs,):
+        self.ptype = str(type).replace('"', "")
+        TerraformObject.__init__(self, type = "provider", metadata=metadata)
 
     def __repr__(self):
         return (

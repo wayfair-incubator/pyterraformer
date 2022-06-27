@@ -125,10 +125,35 @@ class TerraformWorkspace(object):
 
         out = self.files.get(name)
         if not out:
-            self.files[name] = TerraformFile(
-                workspace=self, text="", location=self._path / name
-            )
+            try:
+                file = self.serializer.parse_file(name, self)
+            except FileNotFoundError as e:
+                file = TerraformFile(
+                    workspace=self, text="", location=self._path / name
+                )
+
+            self.files[name] = file
+
         return self.files[name]
+
+    def get_terraform_config(self):
+        from pyterraformer.core.generics import TerraformConfig
+        from pyterraformer.core.generics import Block
+        terraform = self.get_file_safe('terraform.tf')
+        existing = [obj for obj in terraform.objects if isinstance(obj, TerraformConfig)]
+        print(existing)
+        if existing:
+            return existing[0]
+        logger.info('creating new terraform config')
+        config =TerraformConfig(backend= self.terraform.backend.as_object(), required_providers = Block([{}]))
+        terraform.add_object(config)
+        return config
+
+    def add_provider(self, name:str, source:str, **kwargs):
+        existing = self.get_terraform_config()
+        required_providers = getattr(existing, 'required_providers', Block([{}]))
+        required_providers[0][name] = {'source':source, **kwargs}
+        existing.required_providers = required_providers
 
     def add_file(self, file: Union["TerraformFile", PurePath, str]) -> "TerraformFile":
         from pyterraformer.core.namespace import TerraformFile
