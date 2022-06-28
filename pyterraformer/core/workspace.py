@@ -7,7 +7,7 @@ from typing import Dict, List, Union, Any
 from typing import Optional, TYPE_CHECKING
 
 from pyterraformer.constants import logger
-from pyterraformer.core.generics import Literal, Block
+from pyterraformer.core.generics import Literal, BlockList
 from pyterraformer.core.utility import get_root
 from pyterraformer.serializer import BaseSerializer
 from pyterraformer.terraform import Terraform
@@ -33,7 +33,7 @@ def process_attribute(input: Any, level=0):
         #     output[key] = item.__repr__()
         elif isinstance(item, Literal):
             output[key] = item
-        elif isinstance(item, Block):
+        elif isinstance(item, BlockList):
             for idx, sub_item in enumerate(item):
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif isinstance(item, dict):
@@ -126,7 +126,7 @@ class TerraformWorkspace(object):
         out = self.files.get(name)
         if not out:
             try:
-                file = self.serializer.parse_file(name, self)
+                file = self.serializer.parse_file(self._path / name, self)
             except FileNotFoundError as e:
                 file = TerraformFile(
                     workspace=self, text="", location=self._path / name
@@ -138,20 +138,20 @@ class TerraformWorkspace(object):
 
     def get_terraform_config(self):
         from pyterraformer.core.generics import TerraformConfig
-        from pyterraformer.core.generics import Block
+        from pyterraformer.core.generics import BlockList
         terraform = self.get_file_safe('terraform.tf')
         existing = [obj for obj in terraform.objects if isinstance(obj, TerraformConfig)]
         print(existing)
         if existing:
             return existing[0]
         logger.info('creating new terraform config')
-        config =TerraformConfig(backend= self.terraform.backend.as_object(), required_providers = Block([{}]))
+        config =TerraformConfig(backend= self.terraform.backend.as_object(), required_providers = BlockList([{}]))
         terraform.add_object(config)
         return config
 
     def add_provider(self, name:str, source:str, **kwargs):
         existing = self.get_terraform_config()
-        required_providers = getattr(existing, 'required_providers', Block([{}]))
+        required_providers = getattr(existing, 'required_providers', BlockList([{}]))
         required_providers[0][name] = {'source':source, **kwargs}
         existing.required_providers = required_providers
 

@@ -18,11 +18,11 @@ class ResourceObject(TerraformObject):
 
     def __init__(
         self,
-        id: Optional[str] = None,
+        tf_id: str,
         metadata: Optional[ObjectMetadata] = None,
         **kwargs,
     ):
-        TerraformObject.__init__(self, self._type, id, metadata=metadata, **kwargs)
+        TerraformObject.__init__(self, self._type, tf_id, metadata=metadata, **kwargs)
 
     def render_attribute(self, item):
         return f"${{{self._type}.{self.id}.{item}}}"

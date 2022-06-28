@@ -93,7 +93,7 @@ For example, creating or modifying GCS bucket with a local state store is as sim
 import os
 
 from pyterraformer import Terraform, TerraformWorkspace, HumanSerializer, LocalBackend
-from pyterraformer.core.generics import Block
+from pyterraformer.core.generics import BlockList
 from pyterraformer.core.resources import ResourceObject
 
 
@@ -117,10 +117,10 @@ if __name__ == "__main__":
         project="my-project",
         force_destroy=True,
         uniform_bucket_level_access=True,
-        website=Block([{
+        website=BlockList([{
             'not_found_page': "404.html"
         }]),
-        cors=Block([{
+        cors=BlockList([{
             'origin': [
                 "https://readthedocs.org"],
             'method': [

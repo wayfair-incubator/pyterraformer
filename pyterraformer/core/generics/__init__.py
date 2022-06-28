@@ -31,5 +31,5 @@ from .meta_arguments import DependsOn, Provider, ForEach, Count, Lifecycle
 from .metadata import Metadata
 from .output import Output
 from .terraform import TerraformConfig
-from .terraform_block import Block
+from .terraform_block import BlockList, BlockSet
 from .variables import Variable

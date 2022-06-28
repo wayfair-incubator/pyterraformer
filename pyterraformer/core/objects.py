@@ -18,13 +18,13 @@ class TerraformObject(object):
     def __init__(
         self,
         type,
-        id: Optional[str] = None,
+        tf_id: Optional[str] = None,
         metadata: Optional[ObjectMetadata] = None,
         **kwargs,
     ):
 
         self.metadata = metadata or ObjectMetadata()
-        self.id = id
+        self.id = tf_id
         arguments = kwargs or {}
         self.render_variables: Dict[str, str] = {
             str(key): value for key, value in arguments.items()

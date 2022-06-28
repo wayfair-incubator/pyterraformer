@@ -27,21 +27,32 @@ env = jinja2.Environment(
     loader=template_loader, autoescape=True, keep_trailing_newline=True
 )
 
+from dataclasses import dataclass, is_dataclass, asdict
 
 def process_attribute(input: Any):
-    from pyterraformer.core.generics import Variable, Literal, Block
-
-    if not isinstance(input, dict):
+    from pyterraformer.core.generics import Variable, Literal, BlockList, BlockSet
+    valid = False
+    if isinstance(input, dict) or is_dataclass(input):
+        valid = True
+    if not valid:
         return input
+
+    if is_dataclass(input):
+        final_input = asdict(input)
+    else:
+        final_input = input
     output = {}
-    for key, item in input.items():
+    for key, item in final_input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
-        elif isinstance(item, Block):
+        elif isinstance(item, (BlockList, BlockSet)):
             for idx, sub_item in enumerate(item):  # type: ignore
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
+        elif is_dataclass(item):
+            print('DATACLASS')
+            output[f"{key}~~block_0"] = process_attribute(asdict(item))
         elif isinstance(item, dict):
             output[key] = process_attribute(item)
         elif isinstance(item, List):

@@ -1,6 +1,6 @@
 {% macro safe_string(n) %}{% if n is not string %}{{n |string |safe}}{% else %}"{{n |safe}}"{% endif %}{% endmacro %}
 
-{% macro process_value(variable) %}{% if variable.items is defined %}{{recurse(variable)}}{% elif 'Literal' in variable.__class__.__name__ %}{{ variable.value | safe }}{% elif variable is string %}"{{ variable| safe }}"{% elif variable is boolean %}{{ variable|string|lower | safe }}{% elif variable|int != 0 %}{{ variable | safe }}{% elif variable is iterable and variable is not string %}[
+{% macro process_value(variable) %}{% if variable.items is defined %}{{recurse(variable)}}{% elif 'Literal' in variable.__class__.__name__ %}{{ variable.value | safe }}{% elif variable is string %}"{{ variable| safe }}"{% elif variable is boolean %}{{ variable|string|lower | safe }}{% elif variable is none %}null{% elif variable|int != 0 %}{{ variable | safe }}{% elif variable is iterable and variable is not string %}[
 {% for item in variable %}{{process_value(item)}}{% if not loop.last %},
 {% else %}
 {% endif %}{% endfor %}]{% elif variable is not string %}{{variable |string |safe}}{% else %}"{{variable |safe}}"{% endif %}{% endmacro %}

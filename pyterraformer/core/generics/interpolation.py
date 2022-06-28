@@ -275,8 +275,15 @@ class PropertyLookup(Resolvable):
 
 
 class StringLit(Resolvable):
-    def __init__(self, contents):
+    def __init__(self, contents:List):
         self.contents = contents
+
+    @property
+    def string(self)->str:
+        return ''.join([str(v) for v in self.contents])
+
+    def __add__(self, v):
+        return self.string.__add__(v)
 
     def __hash__(self):
         return hash(str(self))

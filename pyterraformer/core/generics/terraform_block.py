@@ -1,2 +1,5 @@
-class Block(list):
+class BlockList(list):
+    pass
+
+class BlockSet(set):
     pass

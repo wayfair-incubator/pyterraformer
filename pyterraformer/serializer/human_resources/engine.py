@@ -236,16 +236,16 @@ class ParseToObjects(Transformer):
         metadata = ObjectMetadata(
             orig_text=self.meta_to_text(meta), row_num=meta.start_pos
         )
-        type, name = args[0:2]
-        type = str(type).replace('"', "")
-        object_type = RESOURCES_MAP.get(type, ResourceObject)
-        object_type._type = type
+        _type, name = args[0:2]
+        _type = str(_type).replace('"', "")
+        object_type = RESOURCES_MAP.get(_type, ResourceObject)
+        object_type._type = _type
         # out = RESOURCES_MAP[str(type).replace('"', "")](
         #     name, str(type), , args[2:]
         # )
         remaining = args[2:]
         to_dict = {str(val): key for val, key in remaining}
-        return object_type(id=name, metadata=metadata, **to_dict)
+        return object_type(tf_id=name, metadata=metadata, **to_dict)
 
     @v_args(meta=True)
     def module(self, meta: Meta, args):
@@ -407,7 +407,7 @@ class ParseToObjects(Transformer):
 
     def split_subarray(self, args):
         name = args[0]
-        return Block(name, args[1:])
+        return [name, Block(name, args[1:])]
 
     def boolean(self, args):
         type = args[0]

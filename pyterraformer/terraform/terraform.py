@@ -19,7 +19,6 @@ class Terraform:
     workspace: str = "default"
 
     def run(self, arguments: Union[str, List[str]], path: str):
-
         workspace = self._run(["workspace", "show"], path=path).strip()
         logger.info(f"Executing {arguments} in workspace {workspace}.")
         if workspace != self.workspace:
