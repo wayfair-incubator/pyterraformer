@@ -1,0 +1,1 @@
+{% import "macros.jinja" as macros %}data {{macros.safe_string(type)}} {{macros.safe_string(name)}} {{ macros.recurse(render_attributes)}}
