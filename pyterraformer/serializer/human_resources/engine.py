@@ -1,6 +1,6 @@
 from lark import Lark, Transformer, v_args, Tree
 from lark.tree import Meta
-from typing import Dict
+from typing import Dict, Tuple
 
 from pyterraformer.core.generics.interpolation import Block
 from pyterraformer.core.generics import (
@@ -24,7 +24,7 @@ from pyterraformer.core.generics import (
     Local,
     Parenthetical,
     LegacySplat,
-
+    BlockList,
     File,
     Boolean,
     Merge,
@@ -109,7 +109,7 @@ grammar = r"""
 
     IDENTIFIER_WITH_DOT : /[a-zA-Z_][a-zA-Z0-9_\\-\\.]*/
     STRING_TERM : STRING_CHARS _WHITESPACE
-    IDENTIFIER : /[a-zA-Z_][a-zA-Z0-9_-]*/
+        IDENTIFIER : /[a-zA-Z_][a-zA-Z0-9_-]*/
     //string section
     string_lit: "\"" ( STRING_CHARS | interpolation)* "\""
     STRING_CHARS: /(?:(?!\${)([^"\\]|\\.))+/+ // any character except '"" unless inside a interpolation string
@@ -206,6 +206,16 @@ grammar = r"""
     %import common.WS
     %ignore WS
 """
+def args_to_dict(input:list)->dict:
+    output = {}
+    # {str(val): key for val, key in args}
+    for key, val in input:
+        if key not in output:
+            output[str(key)] = val
+        else:
+            output[key] += val
+    return output
+
 
 
 class ParseToObjects(Transformer):
@@ -244,8 +254,8 @@ class ParseToObjects(Transformer):
         #     name, str(type), , args[2:]
         # )
         remaining = args[2:]
-        to_dict = {str(val): key for val, key in remaining}
-        return object_type(tf_id=name, metadata=metadata, **to_dict)
+        parsed = args_to_dict(remaining)
+        return object_type(tf_id=name, metadata=metadata, **parsed)
 
     @v_args(meta=True)
     def module(self, meta: Meta, args):
@@ -284,13 +294,18 @@ class ParseToObjects(Transformer):
         metadata = ObjectMetadata(
             orig_text=self.meta_to_text(meta), row_num=meta.start_pos
         )
-        backend = [obj for obj in args if isinstance(obj, Backend)]
-        kwargs = {}
-        if backend:
-            kwargs['backend'] = backend
-        out = TerraformConfig(metadata=metadata, **kwargs)
-        out.row_num = meta.start_pos
-        return out
+        # print(args)
+        # backend = [obj for obj in args if isinstance(obj, Backend)]
+        # kwargs = {}
+        # if backend:
+        #     kwargs['backend'] = backend
+        # out = TerraformConfig(metadata=metadata, **kwargs)
+        # out.row_num = meta.start_pos
+
+        parsed = args_to_dict(args)
+        print('terraform debug')
+        print(parsed)
+        return TerraformConfig(metadata=metadata, **parsed)
 
     @v_args(meta=True)
     def data(self, meta: Meta, args):
@@ -321,7 +336,7 @@ class ParseToObjects(Transformer):
         return out
 
     def backend(self, args):
-        return Backend(args[0], args[1:])
+        return 'backend', Backend(args[0], args[1:])
 
     def output(self, args):
         return Output(args[0], args[1:])
@@ -405,9 +420,13 @@ class ParseToObjects(Transformer):
     def bool_token(self, args):
         return str(args[0].value)
 
-    def split_subarray(self, args):
+    def split_subarray(self, args:list)->Tuple[str, BlockList]:
         name = args[0]
-        return [name, Block(name, args[1:])]
+        # print('split debug')
+        # print(args)
+        # print(args_to_dict(args[1:]))
+        # print('-----')
+        return name, BlockList([{key:val} for key, val in args_to_dict(args[1:]).items()])
 
     def boolean(self, args):
         type = args[0]

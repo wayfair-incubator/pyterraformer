@@ -1,6 +1,7 @@
+
 {% macro safe_string(n) %}{% if n is not string %}{{n |string |safe}}{% else %}"{{n |safe}}"{% endif %}{% endmacro %}
 
-{% macro process_value(variable) %}{% if variable.items is defined %}{{recurse(variable)}}{% elif 'Literal' in variable.__class__.__name__ %}{{ variable.value | safe }}{% elif variable is string %}"{{ variable| safe }}"{% elif variable is boolean %}{{ variable|string|lower | safe }}{% elif variable is none %}null{% elif variable|int != 0 %}{{ variable | safe }}{% elif variable is iterable and variable is not string %}[
+{% macro process_value(variable) %}{% if 'Backend' in variable.__class__.__name__ %} "{{variable.name}}" {{recurse(variable.render_variables)}}{% elif variable.items is defined %}{{recurse(variable)}}{% elif 'Literal' in variable.__class__.__name__ %}{{ variable.value | safe }}{% elif variable is string %}"{{ variable| safe }}"{% elif variable is boolean %}{{ variable|string|lower | safe }}{% elif variable is none %}null{% elif variable|int != 0 %}{{ variable | safe }}{% elif variable is iterable and variable is not string %}[
 {% for item in variable %}{{process_value(item)}}{% if not loop.last %},
 {% else %}
 {% endif %}{% endfor %}]{% elif variable is not string %}{{variable |string |safe}}{% else %}"{{variable |safe}}"{% endif %}{% endmacro %}
@@ -9,4 +10,6 @@
 {% for key, variable in n.items() %}{% if key is string %}{{key.split('~~')[0] | safe}} {% if '~~block' not in key %} = {% endif %}{% else %}{{key | safe}} = {% endif %} {{process_value(variable)}}{% if not loop.last %}
 {% endif %}{% endfor %}
 }{% endmacro %}
+
+{% macro backend(n) %} {{safe_string(name)}} {{safe_string(id)}} {{ recurse(render_attributes)}}{% endmacro %}
 

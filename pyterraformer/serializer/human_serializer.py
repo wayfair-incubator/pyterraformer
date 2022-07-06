@@ -8,6 +8,7 @@ import jinja2
 from pyterraformer.constants import logger
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
+from pyterraformer.core.generics import Backend
 from pyterraformer.serializer.base_serializer import BaseSerializer
 from pyterraformer.serializer.human_resources.engine import parse_text
 
@@ -51,8 +52,9 @@ def process_attribute(input: Any):
             for idx, sub_item in enumerate(item):  # type: ignore
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif is_dataclass(item):
-            print('DATACLASS')
             output[f"{key}~~block_0"] = process_attribute(asdict(item))
+        elif isinstance(item, Backend):
+            output[f"{key}~~block_0"] = process_attribute(item)
         elif isinstance(item, dict):
             output[key] = process_attribute(item)
         elif isinstance(item, List):
@@ -122,7 +124,6 @@ class HumanSerializer(BaseSerializer):
                 final[key] = object.render_variables[key]
         if isinstance(object, TerraformConfig):
             template_name = 'terraform.tf'
-
         elif isinstance(object, ResourceObject):
             template_name = "resource.tf"
         elif isinstance(object, ModuleObject):

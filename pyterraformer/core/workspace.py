@@ -152,6 +152,9 @@ class TerraformWorkspace(object):
     def add_provider(self, name:str, source:str, **kwargs):
         existing = self.get_terraform_config()
         required_providers = getattr(existing, 'required_providers', BlockList([{}]))
+        print(required_providers)
+        print(type(required_providers))
+        print(required_providers[0])
         required_providers[0][name] = {'source':source, **kwargs}
         existing.required_providers = required_providers
 

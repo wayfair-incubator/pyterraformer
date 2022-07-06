@@ -22,9 +22,10 @@ setuptools.setup(
     url="",
     author="",
     author_email="pyterraformer@gmail.com",
-    description="Enjoyable terraform manipulation from python",
+    description="Enjoyable terraform manipulation from python.",
     long_description=open("README.md").read(),
-    packages=setuptools.find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    long_description_content_type='text/markdown',
+    packages=setuptools.find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests", "docs", ".github", ""]),
     package_data={
         "pygsuite": ["*.tf", "*.jinja", "py.typed"],
     },

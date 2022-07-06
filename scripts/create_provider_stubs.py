@@ -1,19 +1,20 @@
+import json
 import os
 from logging import DEBUG
 from logging import StreamHandler
-from typing import Optional, List, Dict, Set
+from pathlib import Path
+from typing import Optional, List, Dict
+
+from jinja2 import Template
 
 from pyterraformer import HumanSerializer
 from pyterraformer.constants import logger
 from pyterraformer.core import TerraformWorkspace
-from pyterraformer.core.generics import BlockList
 from pyterraformer.terraform import Terraform
 from pyterraformer.terraform.backends.local_backend import LocalBackend
 
 logger.addHandler(StreamHandler())
 logger.setLevel(DEBUG)
-import json
-from jinja2 import Template
 
 TEMPLATE = Template('''
 from typing import List, Optional, Dict, Set
@@ -128,6 +129,10 @@ class {{resource.camel_case}}(ResourceObject):
 from dataclasses import dataclass, field
 
 
+def camel_case(string: str) -> str:
+    return ''.join([v.capitalize() for v in string.split('_')])
+
+
 def python_type(tf_type: str) -> str:
     if tf_type == 'string':
         return 'str'
@@ -180,19 +185,19 @@ class Resource:
                                 computed=v.get('computed', False),
                                 description=v.get('description', '')) for key, v in info['block']['attributes'].items()]
         # move optional attributes to the end
-        attributes = sorted(attributes, key = lambda x: 'zzz'+x.name if x.optional else x.name)
+        attributes = sorted(attributes, key=lambda x: 'zzz' + x.name if x.optional else x.name)
         return Resource(key, description=info.get('description'), attributes=attributes)
 
 
-def generate_blocks(schema:dict, depth = 0)->dict:
+def generate_blocks(schema: dict, depth=0) -> dict:
     extra_blocks = {}
     for key, value in schema['block'].get('block_types', {}).items():
-        extra_blocks = {**generate_blocks(value, depth +1), **extra_blocks}
+        extra_blocks = {**generate_blocks(value, depth + 1), **extra_blocks}
     blocks = {key: Block(snake_case=key,
-                         nesting_mode = value.get('nesting_mode'),
-                         description= value.get('description', ''),
-                         max_items = value.get('max_items'),
-                         blocks = generate_blocks(value),
+                         nesting_mode=value.get('nesting_mode'),
+                         description=value.get('description', ''),
+                         max_items=value.get('max_items'),
+                         blocks=generate_blocks(value),
                          optional=value.get('optional', False), attributes=[Attribute(name=key,
                                                                                       type=v.get('type'),
                                                                                       optional=v.get('optional'),
@@ -200,10 +205,12 @@ def generate_blocks(schema:dict, depth = 0)->dict:
                                                                                       description=v.get(
                                                                                           'description', '')) for
                                                                             key, v in
-                                                                            value['block'].get('attributes', {}).items()]
+                                                                            value['block'].get('attributes',
+                                                                                               {}).items()]
                          )
               for key, value in schema['block'].get('block_types', {}).items()}
     return {**extra_blocks, **blocks}
+
 
 @dataclass
 class Block:
@@ -212,8 +219,8 @@ class Block:
     attributes: List[Attribute]
     description: Optional[str]
     nesting_mode: str
-    max_items:int = -1
-    blocks: [Optional[Dict[str,"Block"]]] = field(default_factory = dict)
+    max_items: int = -1
+    blocks: [Optional[Dict[str, "Block"]]] = field(default_factory=dict)
 
     def __post_init__(self):
         # all lists can be empty
@@ -231,23 +238,63 @@ def build_resource_class(key: str, schema: dict):
     blocks = generate_blocks(schema)
     # blocks = sorted(blocks, key= lambda x: not x.blocks)
     class_text = TEMPLATE.render(resource=Resource.parse_from_resource_info(key, schema), blocks=blocks)
-    print(class_text)
-    pass
+    return class_text
 
 
-if __name__ == "__main__":
-
-    tf = Terraform(terraform_exec_path=r'c:/tech/terraform.exe',
+def create_stubs(provider: str, version: str, output_path: str, terraform_path: str):
+    output = {}
+    tf = Terraform(terraform_exec_path=terraform_path,
                    backend=LocalBackend(path=os.getcwd()), )
     workspace = TerraformWorkspace(terraform=tf, path=os.getcwd(), serializer=HumanSerializer(terraform=tf))
-    # workspace.add_provider(name='google', source="hashicorp/google")
-    # workspace.save_all()
+    workspace.add_provider(name='build', source=provider, version=version, )
+    workspace.save_all()
     tf.run('init', path=os.getcwd())
     provider_info = tf.run(['providers', 'schema', '-json'], path=os.getcwd())
     loaded = json.loads(provider_info)
     schemas = loaded['provider_schemas']
-    google = schemas['registry.terraform.io/hashicorp/google']
+    google = schemas[f'registry.terraform.io/{provider}']
     resources = google['resource_schemas']
     for key, value in resources.items():
-        if 'google_storage_bucket'==key:
-            build_resource_class(key, value)
+        output[key] = build_resource_class(key, value)
+    save_stubs(provider, version, output, output_path)
+
+
+def save_stubs(provider: str, version: str, stubs: dict, path: str):
+    base_path = Path(path)
+    root = Path(path) / provider / version
+    os.makedirs(root, exist_ok=True)
+    for key, text in stubs.items():
+        if not text:
+            continue
+        with open(root / f'{key}.py', 'w', encoding='utf-8') as f:
+            f.write(text)
+    imports = [f'from {v} import {camel_case(v)}' for v in stubs.keys()]
+    all = ','.join([f'"{camel_case(v)}"' for v in stubs.keys()])
+    with open(root / '__init__.py', 'w', encoding='utf-8') as f:
+        f.write('\n'.join(imports))
+        f.write(f'__all__ = [{all}]')
+    for component in root.relative_to(base_path).parts:
+        print(component)
+        # with open(Path(path) / provider / '__init__.py', 'w', encoding='utf-8') as f:
+        #     f.write('\n')
+
+
+if __name__ == "__main__":
+    create_stubs('hashicorp/google', version='4.27.0',
+                 output_path=os.path.join(os.path.dirname(os.path.dirname(__file__)), 'examples', 'inspect_providers',
+                                          ), terraform_path=r'c:/tech/terraform.exe')
+
+    # tf = Terraform(terraform_exec_path=r'c:/tech/terraform.exe',
+    #                backend=LocalBackend(path=os.getcwd()), )
+    # workspace = TerraformWorkspace(terraform=tf, path=os.getcwd(), serializer=HumanSerializer(terraform=tf))
+    # workspace.add_provider(name='google', source="hashicorp/google")
+    # workspace.save_all()
+    # tf.run('init', path=os.getcwd())
+    # provider_info = tf.run(['providers', 'schema', '-json'], path=os.getcwd())
+    # loaded = json.loads(provider_info)
+    # schemas = loaded['provider_schemas']
+    # google = schemas['registry.terraform.io/hashicorp/google']
+    # resources = google['resource_schemas']
+    # for key, value in resources.items():
+    #     if 'google_storage_bucket'==key:
+    #         build_resource_class(key, value)

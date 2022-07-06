@@ -22,7 +22,6 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Optional, List, TYPE_CHECKING
 
-
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
     from pyterraformer.core.workspace import TerraformWorkspace
@@ -603,7 +602,7 @@ class Block(Resolvable):
                 key = str(attribute[0])
                 val = attribute[1]
                 if isinstance(val, Block):
-                    base = getattr(self, key, Block())
+                    base = getattr(self, key, Block)
                     base.append(val)
                     val = base
                 setattr(self, key, val)
