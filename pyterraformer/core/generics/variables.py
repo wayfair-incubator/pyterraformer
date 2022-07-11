@@ -1,4 +1,8 @@
 from pyterraformer.core.objects import TerraformObject
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyterraformer.core.generics import Literal
 
 
 class Variable(TerraformObject):
@@ -22,28 +26,28 @@ class Variable(TerraformObject):
                 return item
         raise KeyError(val)
 
-    def render_lookup(self, item):
+    def render_lookup(self, item) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f'var.{self.name}["{item}"]')
 
-    def render_attribute(self, item):
+    def render_attribute(self, item) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f"var.{self.name}.{item}")
 
-    def render_basic(self):
+    def render_basic(self) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f"var.{self.name}")
 
-    def get(self, val, fallback=None):
+    def get(self, val, fallback: str = None):
         for key, item in self.default.items():
             if val == key:
                 return item
         return fallback
 
-    def get_type(self, val):
+    def get_type(self, val) -> "Literal":
         from pyterraformer.core.generics.interpolation import String
         from pyterraformer.core.generics import Literal, StringLit
 

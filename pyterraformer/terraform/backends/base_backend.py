@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from typing import Dict, ClassVar
-from pyterraformer.core.generics import BlockList
+
 from pyterraformer.core.generics import Backend
 
 

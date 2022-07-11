@@ -1,14 +1,17 @@
 from os.path import join, dirname
 from pathlib import Path
+from subprocess import CalledProcessError
 from tempfile import TemporaryDirectory
 from typing import Optional, Dict, Union, TYPE_CHECKING, Any, List
-from subprocess import CalledProcessError
+from dataclasses import is_dataclass, asdict
+
+
 import jinja2
 
 from pyterraformer.constants import logger
+from pyterraformer.core.generics import Backend, Comment
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
-from pyterraformer.core.generics import Backend
 from pyterraformer.serializer.base_serializer import BaseSerializer
 from pyterraformer.serializer.human_resources.engine import parse_text
 
@@ -27,8 +30,6 @@ template_loader = jinja2.FileSystemLoader(searchpath=TEMPLATE_PATH)
 env = jinja2.Environment(
     loader=template_loader, autoescape=True, keep_trailing_newline=True
 )
-
-from dataclasses import dataclass, is_dataclass, asdict
 
 
 def process_attribute(input: Any):
@@ -50,6 +51,8 @@ def process_attribute(input: Any):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
+        elif key.startswith("comment-") and isinstance(item, Comment):
+            output[key] = Literal(item.text)
         elif isinstance(item, (BlockList, BlockSet)):
             for idx, sub_item in enumerate(item):  # type: ignore
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
@@ -123,7 +126,7 @@ class HumanSerializer(BaseSerializer):
         variables["id"] = object.id
         variables["type"] = object._type
         final = {}
-        for key in sorted(object.render_variables.keys()):
+        for key in object.render_variables.keys():
             if key not in final:
                 final[key] = object.render_variables[key]
         if isinstance(object, TerraformConfig):

@@ -13,7 +13,7 @@ from pyterraformer.serializer import BaseSerializer
 from pyterraformer.terraform import Terraform
 
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
+    from pyterraformer.core.namespace import TerraformFile
     from pyterraformer.core.generics.variables import Variable
 
 
@@ -127,7 +127,7 @@ class TerraformWorkspace(object):
         if not out:
             try:
                 file = self.serializer.parse_file(self._path / name, self)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 file = TerraformFile(
                     workspace=self, text="", location=self._path / name
                 )
@@ -237,7 +237,7 @@ class TerraformWorkspace(object):
             if format and self.terraform:
                 if str(file.location).endswith(".tf"):
                     try:
-                        x = self.terraform.run(
+                        self.terraform.run(
                             ["fmt", str(file.location)], path=dirname(file.location)
                         )
                     except Exception as e:

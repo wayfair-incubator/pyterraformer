@@ -1,19 +1,24 @@
-from pyterraformer.core.objects import TerraformObject
+from typing import Optional
+
+from pyterraformer.core.objects import TerraformObject, ObjectMetadata
 
 
 class Comment(TerraformObject):
-    def __init__(self, text, multiline=False):
+    def __init__(
+        self,
+        text: str,
+        multiline: bool = False,
+        _metadata: Optional[ObjectMetadata] = None,
+    ):
         self.multiline = multiline
         if self.multiline:
             text = f"/*{text}*/"
-        TerraformObject.__init__(self, "comment", text, None)
-
-    def __repr__(self):
-        return f"{self._type}({self._original_text})"
+        else:
+            text = text.strip()
+        TerraformObject.__init__(
+            self, "comment", tf_id=None, text=text, _metadata=_metadata
+        )
 
     @property
     def has_content(self):
         return bool(self.text.strip())
-
-    def render(self, variables=None):
-        return self.template.render(multiline=self.multiline, text=self._original_text)

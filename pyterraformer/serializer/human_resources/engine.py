@@ -1,8 +1,8 @@
-from lark import Lark, Transformer, v_args, Tree
-from lark.tree import Meta
 from typing import Dict, Tuple
 
-from pyterraformer.core.generics.interpolation import Block
+from lark import Lark, Transformer, v_args
+from lark.tree import Meta
+
 from pyterraformer.core.generics import (
     Comment,
     Variable,
@@ -12,7 +12,6 @@ from pyterraformer.core.generics import (
     DictLookup,
     PropertyLookup,
     TerraformConfig,
-    Backend,
     Provider,
     BinaryTerm,
     Data,
@@ -37,6 +36,7 @@ from pyterraformer.core.generics import (
     ToSet,
 )
 from pyterraformer.core.modules import ModuleObject
+from pyterraformer.core.objects import ObjectMetadata
 
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
@@ -58,7 +58,7 @@ grammar = r"""
     //TODO: in parsing - follow symlinks?
     symlink: "."+ "/" /[a-zA-Z_\-]+/ ".tf"
 
-    resource: "resource" string_lit string_lit  "{" (sub_object | lifecycle | provider | split_subarray| comment) + "}"
+    resource: "resource" string_lit string_lit  "{" (comment| sub_object | lifecycle | provider | split_subarray ) + "}"
 
     output: "output" string_lit "{"[( comment| sub_object)+] "}"
 
@@ -83,7 +83,7 @@ grammar = r"""
 
     variable_type_declaration: ("type" | "\"type\"") "=" (types | ( "\""  TYPE"\"" ))
     variable_description: ("description" | "\"description\"") "=" (string_lit | heredoc_eof)
-    variable_default_declaration: ("default"| "\"default\"") "=" (tuple | string_lit | boolean | dict | int_lit | heredoc_eof) 
+    variable_default_declaration: ("default"| "\"default\"") "=" (tuple | string_lit | boolean | dict | int_lit | heredoc_eof)
 
     // terraform specific settings
     terraform: "terraform" "{" (backend | sub_object | split_subarray )* "}"
@@ -171,7 +171,7 @@ grammar = r"""
     //heredoc_eof : ("<<EOF" | "<<-EOF" | "<<-EOT" | "<<EOT" | "<<-EOS" ) /((.|\n)(?!(EOF)|(EOT)|(EOS)))+/  /(.|\n){1}/ ("EOF" | "EOT" | "EOS" )
     // : ("<<" "-"? "EO" ("T" | "S" | "F"  ) ) /((.|\n)(?!(EOF)|(EOT)))+/  /(.|\n){1}/ ("EOF" | "EOT" | "EOS")
     heredoc_template : /<<(?P<heredoc>[a-zA-Z][a-zA-Z0-9._-]+)\n(?:.|\n)+?\n+\s*(?P=heredoc)/
-    heredoc_template_trim : /<<-(?P<heredoc_trim>[a-zA-Z][a-zA-Z0-9._-]+)\n(?:.|\n)+?\n+\s*(?P=heredoc_trim)/     
+    heredoc_template_trim : /<<-(?P<heredoc_trim>[a-zA-Z][a-zA-Z0-9._-]+)\n(?:.|\n)+?\n+\s*(?P=heredoc_trim)/
 
     expression : (expr_contents)+ | operation | conditional
 
@@ -190,9 +190,9 @@ grammar = r"""
 
     !boolean : "true" | "false"
     DECIMAL: "0".."9"
-    int_lit: "-"? DECIMAL+ 
+    int_lit: "-"? DECIMAL+
 
-    comment :   /#.*(\n|$)/ |  /\/\/.*\n/   
+    comment :   /#.*(\n|$)/ |  /\/\/.*\n/
 
     multiline_comment: "/*" /((.|\n)(?!\*\/))+/  /(.|\n)/ "*/"
 
@@ -227,6 +227,14 @@ class ParseToObjects(Transformer):
     def meta_to_text(self, meta: Meta):
         return self.text[meta.start_pos : meta.end_pos]
 
+    def generate_metadata(self, meta: Meta) -> ObjectMetadata:
+        return ObjectMetadata(
+            orig_text=self.text[meta.start_pos : meta.end_pos],
+            start_pos=meta.start_pos,
+            end_pos=meta.end_pos,
+            row_num=meta.line,
+        )
+
     def IDENTIFIER(self, args):
         return String(args.value)
 
@@ -242,11 +250,8 @@ class ParseToObjects(Transformer):
     @v_args(meta=True)
     def resource(self, meta: Meta, args):
         from pyterraformer.core.resources import ResourceObject
-        from pyterraformer.core.objects import ObjectMetadata
 
-        metadata = ObjectMetadata(
-            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
-        )
+        metadata = self.generate_metadata(meta)
         _type, name = args[0:2]
         _type = str(_type).replace('"', "")
         object_type = RESOURCES_MAP.get(_type, ResourceObject)
@@ -288,9 +293,7 @@ class ParseToObjects(Transformer):
 
     @v_args(meta=True)
     def terraform(self, meta: Meta, args):
-        from pyterraformer.core.resources import ResourceObject
         from pyterraformer.core.objects import ObjectMetadata
-        from pyterraformer.core.generics import Backend
 
         metadata = ObjectMetadata(
             orig_text=self.meta_to_text(meta), row_num=meta.start_pos
@@ -321,29 +324,28 @@ class ParseToObjects(Transformer):
 
     @v_args(meta=True)
     def comment(self, meta: Meta, args):
-        out = Comment(args[0].value)
-        out.row_num = meta.start_pos
-        return out
+        metadata = self.generate_metadata(meta)
+        out = Comment(text=args[0].value, _metadata=metadata)
+        return [f"comment-{metadata.start_pos}", out]
 
     @v_args(meta=True)
     def multiline_comment(self, meta: Meta, args):
+        metadata = ObjectMetadata(
+            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
+        )
         base = args[0].value
         if len(args) > 1:
             base += args[1].value
-        out = Comment(base, True)
-        out.row_num = meta.start_pos
+        out = Comment(text=base, multiline=True, _metadata=metadata)
         return out
 
     @v_args(meta=True)
     def backend(self, meta: Meta, args):
-        from pyterraformer.core.resources import ResourceObject
-        from pyterraformer.core.objects import ObjectMetadata
         from pyterraformer.core.generics import Backend
 
         metadata = ObjectMetadata(
             orig_text=self.meta_to_text(meta), row_num=meta.start_pos
         )
-        print(args[1:])
         return "backend", Backend(args[0], _metadata=metadata)
 
     def output(self, args):
@@ -430,10 +432,6 @@ class ParseToObjects(Transformer):
 
     def split_subarray(self, args: list) -> Tuple[str, BlockList]:
         name = args[0]
-        # print('split debug')
-        # print(args)
-        # print(args_to_dict(args[1:]))
-        # print('-----')
         return (
             name,
             BlockList([{key: val} for key, val in args_to_dict(args[1:]).items()]),

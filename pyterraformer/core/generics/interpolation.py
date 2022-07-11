@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from typing import Any, Optional, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
+    from pyterraformer.core.namespace import TerraformFile
     from pyterraformer.core.workspace import TerraformWorkspace
 
 
