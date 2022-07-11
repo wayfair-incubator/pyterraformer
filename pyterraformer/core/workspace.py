@@ -25,7 +25,7 @@ def process_attribute(input: Any, level=0):
 
     if not isinstance(input, dict):
         return input
-    output = {}
+    output: Dict[str, Any] = {}
     for key, item in input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
@@ -126,6 +126,8 @@ class TerraformWorkspace(object):
         out = self.files.get(name)
         if not out:
             try:
+                if not self.serializer:
+                    raise FileNotFoundError("No valid serializer found.")
                 file = self.serializer.parse_file(self._path / name, self)
             except FileNotFoundError:
                 file = TerraformFile(

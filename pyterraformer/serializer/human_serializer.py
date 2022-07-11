@@ -45,13 +45,13 @@ def process_attribute(input: Any):
         final_input = asdict(input)
     else:
         final_input = input
-    output = {}
+    output: Dict[str, Any] = {}
     for key, item in final_input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
-        elif key.startswith("comment-") and isinstance(item, Comment):
+        elif str(key).startswith("comment-") and isinstance(item, Comment):
             output[key] = Literal(item.text)
         elif isinstance(item, (BlockList, BlockSet)):
             for idx, sub_item in enumerate(item):  # type: ignore

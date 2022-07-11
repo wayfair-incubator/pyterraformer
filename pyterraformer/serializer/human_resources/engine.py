@@ -281,14 +281,18 @@ class ParseToObjects(Transformer):
     @v_args(meta=True)
     def provider(self, meta: Meta, args):
         name = args[0]
-        out = Provider(name, self.meta_to_text(meta), args)
-        out.row_num = meta.start_pos
+        metadata = self.generate_metadata(meta)
+        remaining = args[0:]
+        parsed = args_to_dict(remaining)
+        out = Provider(name, _metadata=metadata, **parsed)
         return out
 
     @v_args(meta=True)
     def metadata(self, meta: Meta, args):
-        out = TerraformConfig(self.meta_to_text(meta), args)
-        out.row_num = meta.start_pos
+        metadata = self.generate_metadata(meta)
+        remaining = args[0:]
+        parsed = args_to_dict(remaining)
+        out = TerraformConfig(_metadata=metadata, **parsed)
         return out
 
     @v_args(meta=True)

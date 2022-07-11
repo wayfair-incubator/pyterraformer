@@ -59,9 +59,9 @@ class Variable(TerraformObject):
             out = set()
             for item in val.values():
                 out.add(self.get_type(item).value)
-            out = list(out)
-            if len(out) == 1:
-                return Literal(f"map({out[0]})")
+            outlist = list(out)
+            if len(outlist) == 1:
+                return Literal(f"map({outlist[0]})")
             return Literal("map(any)")
         elif isinstance(val, set):
             return Literal(f"set({self.get_type(next(iter(val))).value})")
