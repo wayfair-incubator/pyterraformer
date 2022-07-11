@@ -3,6 +3,7 @@ from typing import Dict, ClassVar
 from pyterraformer.core.generics import BlockList
 from pyterraformer.core.generics import Backend
 
+
 @dataclass
 class BaseBackend:
     SECRET_FIELDS: ClassVar = []
@@ -10,5 +11,5 @@ class BaseBackend:
     def generate_environment(self) -> Dict:
         return {}
 
-    def as_object(self)->Backend:
-        return Backend('undefined')
+    def as_object(self) -> Backend:
+        return Backend("undefined")

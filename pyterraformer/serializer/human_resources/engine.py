@@ -206,7 +206,9 @@ grammar = r"""
     %import common.WS
     %ignore WS
 """
-def args_to_dict(input:list)->dict:
+
+
+def args_to_dict(input: list) -> dict:
     output = {}
     # {str(val): key for val, key in args}
     for key, val in input:
@@ -215,7 +217,6 @@ def args_to_dict(input:list)->dict:
         else:
             output[key] += val
     return output
-
 
 
 class ParseToObjects(Transformer):
@@ -255,7 +256,7 @@ class ParseToObjects(Transformer):
         # )
         remaining = args[2:]
         parsed = args_to_dict(remaining)
-        return object_type(tf_id=name, metadata=metadata, **parsed)
+        return object_type(tf_id=name, _metadata=metadata, **parsed)
 
     @v_args(meta=True)
     def module(self, meta: Meta, args):
@@ -303,9 +304,7 @@ class ParseToObjects(Transformer):
         # out.row_num = meta.start_pos
 
         parsed = args_to_dict(args)
-        print('terraform debug')
-        print(parsed)
-        return TerraformConfig(metadata=metadata, **parsed)
+        return TerraformConfig(_metadata=metadata, **parsed)
 
     @v_args(meta=True)
     def data(self, meta: Meta, args):
@@ -335,8 +334,17 @@ class ParseToObjects(Transformer):
         out.row_num = meta.start_pos
         return out
 
-    def backend(self, args):
-        return 'backend', Backend(args[0], args[1:])
+    @v_args(meta=True)
+    def backend(self, meta: Meta, args):
+        from pyterraformer.core.resources import ResourceObject
+        from pyterraformer.core.objects import ObjectMetadata
+        from pyterraformer.core.generics import Backend
+
+        metadata = ObjectMetadata(
+            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
+        )
+        print(args[1:])
+        return "backend", Backend(args[0], _metadata=metadata)
 
     def output(self, args):
         return Output(args[0], args[1:])
@@ -420,13 +428,16 @@ class ParseToObjects(Transformer):
     def bool_token(self, args):
         return str(args[0].value)
 
-    def split_subarray(self, args:list)->Tuple[str, BlockList]:
+    def split_subarray(self, args: list) -> Tuple[str, BlockList]:
         name = args[0]
         # print('split debug')
         # print(args)
         # print(args_to_dict(args[1:]))
         # print('-----')
-        return name, BlockList([{key:val} for key, val in args_to_dict(args[1:]).items()])
+        return (
+            name,
+            BlockList([{key: val} for key, val in args_to_dict(args[1:]).items()]),
+        )
 
     def boolean(self, args):
         type = args[0]
@@ -439,15 +450,15 @@ class ParseToObjects(Transformer):
 TERRAFORM_PARSER = Lark(grammar, start="start", propagate_positions=True)
 
 
-def parse_text(text, print_flag: bool = False):
-    if print_flag:
-        parsed = TERRAFORM_PARSER.parse(text)
-        for row in parsed.children:
-            if isinstance(row, Tree):
-                for item in row.children:
-                    print(item)
-            else:
-                print(row)
+def parse_text(text: str):
+    # if print_flag:
+    #     parsed = TERRAFORM_PARSER.parse(text)
+    #     for row in parsed.children:
+    #         if isinstance(row, Tree):
+    #             for item in row.children:
+    #                 print(item)
+    #         else:
+    #             print(row)
     return ParseToObjects(visit_tokens=True, text=text).transform(
         TERRAFORM_PARSER.parse(text)
     )

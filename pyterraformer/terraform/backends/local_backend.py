@@ -15,8 +15,9 @@ class LocalBackend(BaseBackend):
         output: Dict = {}
         return output
 
-    def as_object(self)->Backend:
+    def as_object(self) -> Backend:
         return Backend(name="local")
+
 
 @dataclass
 class TemporaryLocalBackend(LocalBackend):

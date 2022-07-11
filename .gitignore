@@ -15,3 +15,5 @@ __pycache__/
 .terraform/
 
 .terraform.lock.hcl
+
+/scripts/local_execution.py

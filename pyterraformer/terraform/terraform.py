@@ -33,6 +33,7 @@ class Terraform:
             else:
                 logger.info("workspace not found, creating")
                 self._run(["workspace", "new", self.workspace], path=path)
+        self._run(["init"], path=path)
         return self._run(arguments=arguments, path=path)
 
     def _run(self, arguments: Union[str, List[str]], path: str):

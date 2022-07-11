@@ -139,23 +139,25 @@ class TerraformWorkspace(object):
     def get_terraform_config(self):
         from pyterraformer.core.generics import TerraformConfig
         from pyterraformer.core.generics import BlockList
-        terraform = self.get_file_safe('terraform.tf')
-        existing = [obj for obj in terraform.objects if isinstance(obj, TerraformConfig)]
-        print(existing)
+
+        terraform = self.get_file_safe("terraform.tf")
+        existing = [
+            obj for obj in terraform.objects if isinstance(obj, TerraformConfig)
+        ]
         if existing:
             return existing[0]
-        logger.info('creating new terraform config')
-        config =TerraformConfig(backend= self.terraform.backend.as_object(), required_providers = BlockList([{}]))
+        logger.info("creating new terraform config")
+        config = TerraformConfig(
+            backend=self.terraform.backend.as_object(),
+            required_providers=BlockList([{}]),
+        )
         terraform.add_object(config)
         return config
 
-    def add_provider(self, name:str, source:str, **kwargs):
+    def add_provider(self, name: str, source: str, **kwargs):
         existing = self.get_terraform_config()
-        required_providers = getattr(existing, 'required_providers', BlockList([{}]))
-        print(required_providers)
-        print(type(required_providers))
-        print(required_providers[0])
-        required_providers[0][name] = {'source':source, **kwargs}
+        required_providers = getattr(existing, "required_providers", BlockList([{}]))
+        required_providers[0][name] = {"source": source, **kwargs}
         existing.required_providers = required_providers
 
     def add_file(self, file: Union["TerraformFile", PurePath, str]) -> "TerraformFile":

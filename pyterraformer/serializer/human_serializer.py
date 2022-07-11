@@ -30,8 +30,10 @@ env = jinja2.Environment(
 
 from dataclasses import dataclass, is_dataclass, asdict
 
+
 def process_attribute(input: Any):
     from pyterraformer.core.generics import Variable, Literal, BlockList, BlockSet
+
     valid = False
     if isinstance(input, dict) or is_dataclass(input):
         valid = True
@@ -87,6 +89,7 @@ class HumanSerializer(BaseSerializer):
 
     def parse_file(self, path: Union[str, Path], workspace: "TerraformWorkspace"):
         from pyterraformer.core.namespace import TerraformFile
+
         with open(path, "r") as f:
             text = f.read()
             objects = self.parse_string(string=text)
@@ -104,7 +107,7 @@ class HumanSerializer(BaseSerializer):
             try:
                 self.terraform.run("fmt", path=td)
             except CalledProcessError as e:
-                logger.error(f'Unable to format file \n{string}')
+                logger.error(f"Unable to format file \n{string}")
                 raise e
             return file_name.open().read()
 
@@ -114,6 +117,7 @@ class HumanSerializer(BaseSerializer):
         if format and not self.can_format:
             raise ValueError("No terraform executable configured, cannot format.")
         from pyterraformer.core.generics import TerraformConfig
+
         format = format if format is not None else self.can_format
         variables = {}
         variables["id"] = object.id
@@ -123,7 +127,7 @@ class HumanSerializer(BaseSerializer):
             if key not in final:
                 final[key] = object.render_variables[key]
         if isinstance(object, TerraformConfig):
-            template_name = 'terraform.tf'
+            template_name = "terraform.tf"
         elif isinstance(object, ResourceObject):
             template_name = "resource.tf"
         elif isinstance(object, ModuleObject):
