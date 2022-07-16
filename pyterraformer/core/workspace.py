@@ -13,7 +13,7 @@ from pyterraformer.serializer import BaseSerializer
 from pyterraformer.terraform import Terraform
 
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
+    from pyterraformer.core.namespace import TerraformFile
     from pyterraformer.core.generics.variables import Variable
 
 
@@ -25,7 +25,7 @@ def process_attribute(input: Any, level=0):
 
     if not isinstance(input, dict):
         return input
-    output = {}
+    output: Dict[str, Any] = {}
     for key, item in input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
@@ -126,8 +126,10 @@ class TerraformWorkspace(object):
         out = self.files.get(name)
         if not out:
             try:
+                if not self.serializer:
+                    raise FileNotFoundError("No valid serializer found.")
                 file = self.serializer.parse_file(self._path / name, self)
-            except FileNotFoundError as e:
+            except FileNotFoundError:
                 file = TerraformFile(
                     workspace=self, text="", location=self._path / name
                 )
@@ -139,20 +141,25 @@ class TerraformWorkspace(object):
     def get_terraform_config(self):
         from pyterraformer.core.generics import TerraformConfig
         from pyterraformer.core.generics import BlockList
-        terraform = self.get_file_safe('terraform.tf')
-        existing = [obj for obj in terraform.objects if isinstance(obj, TerraformConfig)]
-        print(existing)
+
+        terraform = self.get_file_safe("terraform.tf")
+        existing = [
+            obj for obj in terraform.objects if isinstance(obj, TerraformConfig)
+        ]
         if existing:
             return existing[0]
-        logger.info('creating new terraform config')
-        config =TerraformConfig(backend= self.terraform.backend.as_object(), required_providers = BlockList([{}]))
+        logger.info("creating new terraform config")
+        config = TerraformConfig(
+            backend=self.terraform.backend.as_object(),
+            required_providers=BlockList([{}]),
+        )
         terraform.add_object(config)
         return config
 
-    def add_provider(self, name:str, source:str, **kwargs):
+    def add_provider(self, name: str, source: str, **kwargs):
         existing = self.get_terraform_config()
-        required_providers = getattr(existing, 'required_providers', BlockList([{}]))
-        required_providers[0][name] = {'source':source, **kwargs}
+        required_providers = getattr(existing, "required_providers", BlockList([{}]))
+        required_providers[0][name] = {"source": source, **kwargs}
         existing.required_providers = required_providers
 
     def add_file(self, file: Union["TerraformFile", PurePath, str]) -> "TerraformFile":
@@ -232,7 +239,7 @@ class TerraformWorkspace(object):
             if format and self.terraform:
                 if str(file.location).endswith(".tf"):
                     try:
-                        x = self.terraform.run(
+                        self.terraform.run(
                             ["fmt", str(file.location)], path=dirname(file.location)
                         )
                     except Exception as e:

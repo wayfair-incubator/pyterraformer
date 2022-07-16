@@ -5,10 +5,8 @@ from typing import Optional
 
 
 class Backend(TerraformObject):
-    def __init__(self, name:str,
-                 metadata: Optional[ObjectMetadata] = None,
-                 **kwargs,):
-        TerraformObject.__init__(self, "backend", metadata=metadata, **kwargs)
+    def __init__(self, name: str, _metadata: Optional[ObjectMetadata] = None, **kwargs):
+        TerraformObject.__init__(self, "backend", _metadata=_metadata, **kwargs)
         self.name = str(name).replace('"', "")
 
     # def render(self, variables=None):

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional, TYPE_CHECKING
+from typing import Dict, Optional, TYPE_CHECKING
 
 from pyterraformer.exceptions import ValidationError
 
@@ -12,6 +12,8 @@ class ObjectMetadata:
     source_file: Optional[str] = None
     orig_text: Optional[str] = None
     row_num: Optional[int] = None
+    start_pos: Optional[int] = None
+    end_pos: Optional[int] = None
 
 
 class TerraformObject(object):
@@ -19,11 +21,11 @@ class TerraformObject(object):
         self,
         type,
         tf_id: Optional[str] = None,
-        metadata: Optional[ObjectMetadata] = None,
+        _metadata: Optional[ObjectMetadata] = None,
         **kwargs,
     ):
 
-        self.metadata = metadata or ObjectMetadata()
+        self._metadata = _metadata or ObjectMetadata()
         self.id = tf_id
         arguments = kwargs or {}
         self.render_variables: Dict[str, str] = {

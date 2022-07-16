@@ -1,14 +1,12 @@
-import atexit
-import shutil
 from dataclasses import dataclass
-from tempfile import mkdtemp
 from typing import Optional
 
 from pyterraformer.settings import get_default_terraform_location
 
-tempdir = mkdtemp()
 
-atexit.register(shutil.rmtree, tempdir)
+# tempdir = mkdtemp()
+#
+# atexit.register(shutil.rmtree, tempdir)
 
 
 @dataclass

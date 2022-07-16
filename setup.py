@@ -21,12 +21,14 @@ setuptools.setup(
     version=version,
     url="",
     author="",
-    author_email="",
-    description="Human readable terraform manipulation.",
+    author_email="pyterraformer@gmail.com",
+    description="Enjoyable terraform manipulation from python.",
     long_description=open("README.md").read(),
-    packages=setuptools.find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    long_description_content_type='text/markdown',
+    # package_dir={'':'pyterraformer'},
+    packages=setuptools.find_packages(exclude=["dist", "build", "*.tests", "*.tests.*", "tests.*", "tests", "docs", ".github", "", "examples"]),
     package_data={
-        "pygsuite": ["*.tf", "*.jinja", "py.typed"],
+        "": ["*.tf", "*.jinja", "py.typed"],
     },
     install_requires=install_requires,
     classifiers=[

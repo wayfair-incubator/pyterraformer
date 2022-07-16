@@ -1,11 +1,15 @@
 from os.path import join, dirname
 from pathlib import Path
+from subprocess import CalledProcessError
 from tempfile import TemporaryDirectory
 from typing import Optional, Dict, Union, TYPE_CHECKING, Any, List
-from subprocess import CalledProcessError
+from dataclasses import is_dataclass, asdict
+
+
 import jinja2
 
 from pyterraformer.constants import logger
+from pyterraformer.core.generics import Backend, Comment
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
 from pyterraformer.serializer.base_serializer import BaseSerializer
@@ -27,10 +31,10 @@ env = jinja2.Environment(
     loader=template_loader, autoescape=True, keep_trailing_newline=True
 )
 
-from dataclasses import dataclass, is_dataclass, asdict
 
 def process_attribute(input: Any):
     from pyterraformer.core.generics import Variable, Literal, BlockList, BlockSet
+
     valid = False
     if isinstance(input, dict) or is_dataclass(input):
         valid = True
@@ -41,18 +45,21 @@ def process_attribute(input: Any):
         final_input = asdict(input)
     else:
         final_input = input
-    output = {}
+    output: Dict[str, Any] = {}
     for key, item in final_input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
+        elif str(key).startswith("comment-") and isinstance(item, Comment):
+            output[key] = Literal(item.text)
         elif isinstance(item, (BlockList, BlockSet)):
             for idx, sub_item in enumerate(item):  # type: ignore
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif is_dataclass(item):
-            print('DATACLASS')
             output[f"{key}~~block_0"] = process_attribute(asdict(item))
+        elif isinstance(item, Backend):
+            output[f"{key}~~block_0"] = process_attribute(item)
         elif isinstance(item, dict):
             output[key] = process_attribute(item)
         elif isinstance(item, List):
@@ -85,6 +92,7 @@ class HumanSerializer(BaseSerializer):
 
     def parse_file(self, path: Union[str, Path], workspace: "TerraformWorkspace"):
         from pyterraformer.core.namespace import TerraformFile
+
         with open(path, "r") as f:
             text = f.read()
             objects = self.parse_string(string=text)
@@ -102,7 +110,7 @@ class HumanSerializer(BaseSerializer):
             try:
                 self.terraform.run("fmt", path=td)
             except CalledProcessError as e:
-                logger.error(f'Unable to format file \n{string}')
+                logger.error(f"Unable to format file \n{string}")
                 raise e
             return file_name.open().read()
 
@@ -112,17 +120,17 @@ class HumanSerializer(BaseSerializer):
         if format and not self.can_format:
             raise ValueError("No terraform executable configured, cannot format.")
         from pyterraformer.core.generics import TerraformConfig
+
         format = format if format is not None else self.can_format
         variables = {}
         variables["id"] = object.id
         variables["type"] = object._type
         final = {}
-        for key in sorted(object.render_variables.keys()):
+        for key in object.render_variables.keys():
             if key not in final:
                 final[key] = object.render_variables[key]
         if isinstance(object, TerraformConfig):
-            template_name = 'terraform.tf'
-
+            template_name = "terraform.tf"
         elif isinstance(object, ResourceObject):
             template_name = "resource.tf"
         elif isinstance(object, ModuleObject):

@@ -22,9 +22,8 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Optional, List, TYPE_CHECKING
 
-
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile, TerraformNamespace
+    from pyterraformer.core.namespace import TerraformFile
     from pyterraformer.core.workspace import TerraformWorkspace
 
 
@@ -275,12 +274,12 @@ class PropertyLookup(Resolvable):
 
 
 class StringLit(Resolvable):
-    def __init__(self, contents:List):
+    def __init__(self, contents: List):
         self.contents = contents
 
     @property
-    def string(self)->str:
-        return ''.join([str(v) for v in self.contents])
+    def string(self) -> str:
+        return "".join([str(v) for v in self.contents])
 
     def __add__(self, v):
         return self.string.__add__(v)
@@ -603,7 +602,7 @@ class Block(Resolvable):
                 key = str(attribute[0])
                 val = attribute[1]
                 if isinstance(val, Block):
-                    base = getattr(self, key, Block())
+                    base = getattr(self, key, Block)
                     base.append(val)
                     val = base
                 setattr(self, key, val)

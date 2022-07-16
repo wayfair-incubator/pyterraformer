@@ -23,7 +23,7 @@ class BaseParser:
     def parse_workspace(self, path: Union[str, PurePath]) -> "TerraformWorkspace":
         if not isinstance(path, PurePath):
             path = PurePath(path)
-
-        files = [f for f in listdir(path) if isfile(join(path, f))]
+        # Should we automatically parse files?
+        # files = [f for f in listdir(path) if isfile(join(path, f))]
 
         return TerraformWorkspace(path=path)

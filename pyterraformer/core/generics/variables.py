@@ -1,4 +1,8 @@
 from pyterraformer.core.objects import TerraformObject
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pyterraformer.core.generics import Literal
 
 
 class Variable(TerraformObject):
@@ -22,28 +26,28 @@ class Variable(TerraformObject):
                 return item
         raise KeyError(val)
 
-    def render_lookup(self, item):
+    def render_lookup(self, item) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f'var.{self.name}["{item}"]')
 
-    def render_attribute(self, item):
+    def render_attribute(self, item) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f"var.{self.name}.{item}")
 
-    def render_basic(self):
+    def render_basic(self) -> "Literal":
         from pyterraformer.core.generics import Literal
 
         return Literal(f"var.{self.name}")
 
-    def get(self, val, fallback=None):
+    def get(self, val, fallback: str = None):
         for key, item in self.default.items():
             if val == key:
                 return item
         return fallback
 
-    def get_type(self, val):
+    def get_type(self, val) -> "Literal":
         from pyterraformer.core.generics.interpolation import String
         from pyterraformer.core.generics import Literal, StringLit
 
@@ -55,9 +59,9 @@ class Variable(TerraformObject):
             out = set()
             for item in val.values():
                 out.add(self.get_type(item).value)
-            out = list(out)
-            if len(out) == 1:
-                return Literal(f"map({out[0]})")
+            outlist = list(out)
+            if len(outlist) == 1:
+                return Literal(f"map({outlist[0]})")
             return Literal("map(any)")
         elif isinstance(val, set):
             return Literal(f"set({self.get_type(next(iter(val))).value})")

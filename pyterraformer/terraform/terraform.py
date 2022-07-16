@@ -33,6 +33,7 @@ class Terraform:
             else:
                 logger.info("workspace not found, creating")
                 self._run(["workspace", "new", self.workspace], path=path)
+        self._run(["init"], path=path)
         return self._run(arguments=arguments, path=path)
 
     def _run(self, arguments: Union[str, List[str]], path: str):
@@ -54,14 +55,17 @@ class Terraform:
             runtime_env["TF_PLUGIN_CACHE_DIR"] = self.plugin_cache_directory
 
         cmd_array: List[str] = [self.terraform_exec_path, *arguments]
-        run_cmd = lambda: sub_run(
-            cmd_array,
-            cwd=path,
-            env=runtime_env,
-            check=True,
-            capture_output=True,
-            encoding="utf-8",
-        ).stdout
+
+        def run_cmd():
+            return sub_run(
+                cmd_array,
+                cwd=path,
+                env=runtime_env,
+                check=True,
+                capture_output=True,
+                encoding="utf-8",
+            ).stdout
+
         try:
             return run_cmd()
         except CalledProcessError as e:
