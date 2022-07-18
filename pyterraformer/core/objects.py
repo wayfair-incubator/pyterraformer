@@ -3,6 +3,7 @@ from typing import Dict, Optional, TYPE_CHECKING
 
 from pyterraformer.exceptions import ValidationError
 
+
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformNamespace
 
@@ -26,7 +27,7 @@ class TerraformObject(object):
     ):
 
         self._metadata = _metadata or ObjectMetadata()
-        self.id = tf_id
+        self.tf_id = tf_id
         arguments = kwargs or {}
         self.render_variables: Dict[str, str] = {
             str(key): value for key, value in arguments.items()
@@ -83,6 +84,10 @@ class TerraformObject(object):
         ):
             lookup = name.rsplit("_", 1)[0]
             return self.resolved_attributes.get(lookup)
+        elif name.rsplit('_', 1)[1] == 'lookup':
+            from pyterraformer.core.generics import Literal
+            property = name.rsplit('_', 1)[0]
+            return Literal(f'{self._type}.{self.tf_id}.{property}')
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
@@ -92,7 +97,7 @@ class TerraformObject(object):
         So skip anything with a private method, or in the disallow list...
         Unless it's also in the list of things that we should render."""
         if name.startswith("_") or (
-            name in ("row_num", "template", "name", "id")
+            name in ("row_num", "template", "name", "tf_id")
             and not (self.render_variables and name in self.render_variables)
         ):
             super().__setattr__(name, value)

@@ -102,9 +102,9 @@ class TerraformFile(TerraformNamespace):
                 idx
                 for idx, obj in enumerate(self.objects)
                 if isinstance(object, ResourceObject)
-                and object.id
-                and object.id + (object._type or "")
-                == getattr(obj, "id", "") + getattr(obj, "_type", "")
+                   and object.tf_id
+                   and object.tf_id + (object._type or "")
+                   == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
             ]
         elif isinstance(object, ModuleObject):
             duplicates = [
@@ -113,7 +113,7 @@ class TerraformFile(TerraformNamespace):
                 if isinstance(object, ModuleObject)
                 and object.id
                 and object.id + (object._type or "")
-                == getattr(obj, "id", "") + getattr(obj, "_type", "")
+                == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
             ]
         return duplicates
 

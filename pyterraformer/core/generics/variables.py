@@ -79,7 +79,7 @@ class Variable(TerraformObject):
 
     def render(self, variables=None):
         variables = variables or {}
-        variables["id"] = self.name
+        variables["tf_id"] = self.name
         type_map = self.get_type(self.render_variables.get("default", None))
         self.render_variables["type"] = type_map
 

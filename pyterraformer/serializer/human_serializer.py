@@ -8,7 +8,7 @@ from dataclasses import is_dataclass, asdict
 
 import jinja2
 
-from pyterraformer.constants import logger
+from pyterraformer.constants import logger, EMPTY_DEFAULT
 from pyterraformer.core.generics import Backend, Comment
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
@@ -47,7 +47,9 @@ def process_attribute(input: Any):
         final_input = input
     output: Dict[str, Any] = {}
     for key, item in final_input.items():
-        if isinstance(item, Variable):
+        if item == EMPTY_DEFAULT:
+            continue
+        elif isinstance(item, Variable):
             output[key] = item.render_basic()
         elif isinstance(item, Literal):
             output[key] = item
@@ -123,7 +125,7 @@ class HumanSerializer(BaseSerializer):
 
         format = format if format is not None else self.can_format
         variables = {}
-        variables["id"] = object.id
+        variables["tf_id"] = object.tf_id
         variables["type"] = object._type
         final = {}
         for key in object.render_variables.keys():
@@ -138,9 +140,13 @@ class HumanSerializer(BaseSerializer):
         else:
             template_name = "generic.tf"
         template = env.get_template(template_name)
+        # print(final)
+        # print(process_attribute(final))
+        # raise ValueError
         string = template.render(
             render_attributes=process_attribute(final), **variables
         )
+
         if format:
             string = self._format_string(string)
         return string
