@@ -7,7 +7,7 @@
 {% endif %}{% endfor %}]{% elif variable is not string %}{{variable |string |safe}}{% else %}"{{variable |safe}}"{% endif %}{% endmacro %}
 
 {% macro recurse(n) %}{
-{% for key, variable in n.items() %}{% if key is string and key.startswith('comment-')  %}{% elif key is string %}{% if not key.__contains__('/') %}{{key.split('~~')[0] | safe}}{% else %}"{{key.split('~~')[0] | safe}}"{% endif %}{% if '~~block' not in key %} = {% endif %}{% else %}{{key | safe}}= {% endif %}{{process_value(variable)}}{% if not loop.last %}
+{% for key, variable in n.items() %}{% if key is string and key.startswith('comment-')  %}{% elif key is string %}{% if not key.__contains__('/') %}{{key.split('~~')[0] | safe}}{% else %}"{{key.split('~~')[0] | safe}}"{% endif %}{% if '~~block' not in key %} = {% endif %}{% else %}{{key | safe}} = {% endif %}{{process_value(variable)}}{% if not loop.last %}
 {% endif %}{% endfor %}
 }{% endmacro %}
 
