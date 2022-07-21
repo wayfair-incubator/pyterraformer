@@ -151,24 +151,34 @@ class HumanSerializer(BaseSerializer):
             string = self._format_string(string)
         return string
 
-    def render_namespace(self, namespace: "TerraformNamespace") -> str:
+    def render_namespace(
+        self, namespace: "TerraformNamespace", format: Optional[bool] = None
+    ) -> str:
         from pyterraformer.core.generics import Comment
+
+        format = format if format is not None else self.can_format
 
         out = []
         for idx, object in enumerate(namespace.objects):
             # comments should have no trailing whitespace
             if isinstance(object, Comment):
-                out.append(self.render_object(object))
+                out.append(self.render_object(object, format=False))
             # EOF one
             elif idx == len(namespace.objects) - 1:
-                out.append(self.render_object(object) + "\n")
+                out.append(self.render_object(object, format=False) + "\n")
             # all others two
             else:
-                out.append(self.render_object(object) + "\n\n")
+                out.append(self.render_object(object, format=False) + "\n\n")
+        if format:
+            string = "".join(out)
+            return self._format_string(string)
         return "".join(out)
 
-    def render_workspace(self, workspace: "TerraformWorkspace") -> Dict[str, str]:
+    def render_workspace(
+        self, workspace: "TerraformWorkspace", format: Optional[bool] = None
+    ) -> Dict[str, str]:
+        format = format if format is not None else self.can_format
         output = {}
         for name, file in workspace.files.items():
-            output[name] = self.render_namespace(file)
+            output[name] = self.render_namespace(file, format=format)
         return output

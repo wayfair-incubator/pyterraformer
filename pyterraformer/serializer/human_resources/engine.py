@@ -266,8 +266,9 @@ class ParseToObjects(Transformer):
     @v_args(meta=True)
     def module(self, meta: Meta, args):
         name = args[0]
-        out = ModuleObject(self.meta_to_text(meta), name, args[1:])
-        out.row_num = meta.start_pos
+        remaining = args[1:]
+        parsed = args_to_dict(remaining)
+        out = ModuleObject(tf_id=name, _metadata=self.meta_to_text(meta), **parsed)
         return out
 
     @v_args(meta=True)
@@ -302,13 +303,6 @@ class ParseToObjects(Transformer):
         metadata = ObjectMetadata(
             orig_text=self.meta_to_text(meta), row_num=meta.start_pos
         )
-        # print(args)
-        # backend = [obj for obj in args if isinstance(obj, Backend)]
-        # kwargs = {}
-        # if backend:
-        #     kwargs['backend'] = backend
-        # out = TerraformConfig(metadata=metadata, **kwargs)
-        # out.row_num = meta.start_pos
 
         parsed = args_to_dict(args)
         return TerraformConfig(_metadata=metadata, **parsed)

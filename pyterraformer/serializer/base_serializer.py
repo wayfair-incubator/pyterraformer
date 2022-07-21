@@ -30,7 +30,9 @@ class BaseSerializer(object):
     ) -> str:
         raise NotImplementedError
 
-    def render_namespace(self, namespace: "TerraformNamespace") -> str:
+    def render_namespace(
+        self, namespace: "TerraformNamespace", format: Optional[bool] = None
+    ) -> str:
         raise NotImplementedError
 
     def render_workspace(self, workspace: "TerraformWorkspace") -> Dict[str, str]:
