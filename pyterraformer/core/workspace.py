@@ -230,23 +230,20 @@ class TerraformWorkspace(object):
 
         if not self.serializer:
             raise ValueError("Cannot save without serializer defined.")
+        format = False
         for key, file in self.files.items(resolve=False):  # type: ignore
             # skip files we never touched
             if isinstance(file, LazyFile):
                 logger.info("Skipping lazily unparsed file")
                 continue
             file.save(self.serializer)
-            if format and self.terraform:
-                if str(file.location).endswith(".tf"):
-                    try:
-                        self.terraform.run(
-                            ["fmt", str(file.location)], path=dirname(file.location)
-                        )
-                    except Exception as e:
-                        with open(file.location, "r") as output:
-                            comparison = output.read()
-                            logger.error(f"Error parsing {comparison}")
-                        raise e
+            if str(file.location).endswith(".tf"):
+                format = True
+        if format and self.terraform:
+            try:
+                self.terraform.run(["fmt"], path=dirname(self.path))
+            except Exception as e:
+                raise e
         if apply:
             self.apply()
 

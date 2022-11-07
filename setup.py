@@ -31,6 +31,7 @@ setuptools.setup(
         "": ["*.tf", "*.jinja", "py.typed"],
     },
     install_requires=install_requires,
+    scripts = ['scripts/create_provider_stubs.py'],
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",

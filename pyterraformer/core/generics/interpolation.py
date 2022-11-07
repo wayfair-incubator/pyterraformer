@@ -62,8 +62,8 @@ class FileLookupInstantiator(Resolvable):
     def __init__(self, workspace: "TerraformWorkspace"):
         for key, file in workspace.files.items():
             for object in file.objects:
-                if hasattr(object, "id"):
-                    setattr(self, object.id, object)
+                if hasattr(object, "tf_id"):
+                    setattr(self, object.tf_id, object)
                 if hasattr(object, "_name"):
                     setattr(self, object._name, object)
 
@@ -100,7 +100,7 @@ class FileObjectSubClassLookupInstantiator(Resolvable):
 
     def __getattr__(self, item):
         try:
-            return [obj for obj in self.obj_list if obj.id == item][0]
+            return [obj for obj in self.obj_list if obj.tf_id == item][0]
         except IndexError:
             return f"<could not compute {item} from file lookup>"
 

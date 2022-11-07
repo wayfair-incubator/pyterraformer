@@ -3,7 +3,7 @@
 [![Python Versions](https://img.shields.io/pypi/pyversions/pyterraformer.svg)](https://pypi.python.org/pypi/pyterraformer)
 [![Downloads](https://img.shields.io/badge/dynamic/json.svg?label=downloads&url=https%3A%2F%2Fpypistats.org%2Fapi%2Fpackages%2Fpyterraformer%2Frecent&query=data.last_month&colorB=brightgreen&suffix=%2FMonth)](https://pypistats.org/packages/pyterraformer)
 
-# OSPO Project Template
+# Pyterraformer
 
 [![Contributor Covenant](https://img.shields.io/badge/Contributor%20Covenant-2.0-4baaaa.svg)](CODE_OF_CONDUCT.md)
 
@@ -85,7 +85,7 @@ assert updated == '''resource "aws_s3_bucket" "b" {
 
 ## Applying
 
-If you just want to directly create/modify resources, you can do that too.
+If you just want to directly create/modify resources from python, you can do that too.
 
 For example, creating or modifying GCS bucket with a local state store is as simple as the below.
 

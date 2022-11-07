@@ -22,7 +22,7 @@ class ResourceObject(TerraformObject):
         TerraformObject.__init__(self, self._type, tf_id, _metadata=_metadata, **kwargs)
 
     def render_attribute(self, item):
-        return f"${{{self._type}.{self.id}.{item}}}"
+        return f"${{{self._type}.{self.tf_id}.{item}}}"
 
     @property
     def import_address(self) -> str:

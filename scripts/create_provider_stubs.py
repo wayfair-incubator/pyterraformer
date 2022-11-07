@@ -36,10 +36,10 @@ class {{block.camel_case}}():
     {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
     
     {%- for item in block.attributes %}{% if item.optional %}
-    {{item.name}}: {{item.python_type}} = None{% endif %}{% endfor %}
+    {{item.name}}: {{item.python_type}} = EMPTY_DEFAULT{% endif %}{% endfor %}
     
     {%- for key, item  in block.blocks.items() %}{% if item.optional %}
-    {{item.snake_case}}: Optional[{{item.camel_case}}]=None,{% endif %}{% endfor %}
+    {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
     pass
 {% endif %}
 {%- if block.nesting_mode == 'list' %}
@@ -56,10 +56,10 @@ class {{block.camel_case}}(BlockList):
         {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
         
         {%- for item in block.attributes %}{% if item.optional %}
-        {{item.name}}: Optional[{{item.python_type}}] = None{% endif %}{% endfor %}
+        {{item.name}}: Optional[{{item.python_type}}] = EMPTY_DEFAULT{% endif %}{% endfor %}
         
         {%- for key, item  in block.blocks.items() %}{% if item.optional %}
-        {{item.snake_case}}: Optional[{{item.camel_case}}]=None,{% endif %}{% endfor %}
+        {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
         pass
     items: List[{{block.camel_case}}Item]
 {% endif %}
@@ -77,10 +77,10 @@ class {{block.camel_case}}(BlockSet):
         {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
         
         {%- for item in block.attributes %}{% if item.optional %}
-        {{item.name}}: Optional[{{item.python_type}}] = None{% endif %}{% endfor %}
+        {{item.name}}: Optional[{{item.python_type}}] = EMPTY_DEFAULT{% endif %}{% endfor %}
         
         {%- for key, item  in block.blocks.items() %}{% if item.optional %}
-        {{item.snake_case}}: Optional[{{item.camel_case}}]=None,{% endif %}{% endfor %}
+        {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
         pass
     items: Set[{{block.camel_case}}Item]
 {% endif %}
@@ -92,6 +92,7 @@ from typing import List, Optional, Dict, Set, Any
 from pyterraformer.core.resources import ResourceObject
 from pyterraformer.core.generics import BlockList, BlockSet
 from pyterraformer.core.objects import ObjectMetadata
+from pyterraformer.constants import EMPTY_DEFAULT
 from dataclasses import dataclass
 
 
@@ -118,10 +119,10 @@ class {{resource.camel_case}}(ResourceObject):
         {%- for key, item  in blocks.items() %}{% if not item.optional and not item.computed %}
         {{item.snake_case}}:{{item.camel_case}},{% endif %}{% endfor %}
         #optional
-        _metadata: Optional[ObjectMetadata] = None,
+        _metadata: Optional[ObjectMetadata] = EMPTY_DEFAULT,
         
         {%- for item in resource.attributes %}{% if item.optional %}
-        {{item.name}}: {{item.python_type}} = None,{% endif %}{% endfor %}
+        {{item.name}}: {{item.python_type}} = EMPTY_DEFAULT,{% endif %}{% endfor %}
         
         {%- for key, item  in blocks.items() %}{% if item.optional %}
         {{item.snake_case}}: Optional[{{item.camel_case}}]=None,{% endif %}{% endfor %}

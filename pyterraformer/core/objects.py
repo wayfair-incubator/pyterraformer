@@ -3,6 +3,7 @@ from typing import Dict, Optional, TYPE_CHECKING
 
 from pyterraformer.exceptions import ValidationError
 
+
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformNamespace
 
@@ -19,14 +20,14 @@ class ObjectMetadata:
 class TerraformObject(object):
     def __init__(
         self,
-        type,
+        _type,
         tf_id: Optional[str] = None,
         _metadata: Optional[ObjectMetadata] = None,
         **kwargs,
     ):
 
         self._metadata = _metadata or ObjectMetadata()
-        self.id = tf_id
+        self.tf_id = tf_id
         arguments = kwargs or {}
         self.render_variables: Dict[str, str] = {
             str(key): value for key, value in arguments.items()
@@ -39,7 +40,7 @@ class TerraformObject(object):
         #         base = self.render_variables.get(attribute.name, Block())
         #         base.append(attribute)
         #         self.render_variables[attribute.name] = base
-        self._type: str = type
+        self._type: str = _type
         self._changed: bool = False
         self._workspace = None
         self._file: Optional["TerraformNamespace"] = None
@@ -53,18 +54,6 @@ class TerraformObject(object):
             )
             + ")"
         )
-
-    @classmethod
-    def create(cls, id, **kwargs):
-        kwargs = kwargs or {}
-
-        attributes = [[key, item] for key, item in kwargs.items()]
-        if hasattr(cls, "REQUIRED_ATTRIBUTES"):
-            for attribute in cls.REQUIRED_ATTRIBUTES:
-                if attribute not in kwargs:
-                    raise ValidationError(f"Missing required attribute {attribute}")
-        ctype = getattr(cls, "type", kwargs.get("type", "Unknown"))
-        return cls(id, ctype, original_text=None, attributes=attributes)
 
     @property
     def tf_attributes(self):
@@ -83,6 +72,11 @@ class TerraformObject(object):
         ):
             lookup = name.rsplit("_", 1)[0]
             return self.resolved_attributes.get(lookup)
+        elif "_" in name and name.rsplit("_", 1)[1] == "lookup":
+            from pyterraformer.core.generics import Literal
+
+            property = name.rsplit("_", 1)[0]
+            return Literal(f"{self._type}.{self.tf_id}.{property}")
         return super().__getattribute__(name)
 
     def __setattr__(self, name, value):
@@ -92,7 +86,7 @@ class TerraformObject(object):
         So skip anything with a private method, or in the disallow list...
         Unless it's also in the list of things that we should render."""
         if name.startswith("_") or (
-            name in ("row_num", "template", "name", "id")
+            name in ("row_num", "template", "name", "tf_id")
             and not (self.render_variables and name in self.render_variables)
         ):
             super().__setattr__(name, value)
