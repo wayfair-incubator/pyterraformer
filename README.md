@@ -48,11 +48,11 @@ from pyterraformer import HumanSerializer
 
 hs = HumanSerializer(terraform='/path/to/my/terraform/binary')
 
-example_string = '''resource "aws_s3_bucket" "b" {
+example_string:str = '''resource "aws_s3_bucket" "b" {
   bucket = "my-tf-test-bucket"
-
+  
   tags = {
-    Name        = "My bucket"
+Name        = "My bucket"
     Environment = "Dev"
   }
 }'''
@@ -61,7 +61,7 @@ example_string = '''resource "aws_s3_bucket" "b" {
 namespace = hs.parse_string(example_string)
 
 # get the bucket from that list
-bucket = namespace.objects[0]
+bucket = namespace[0]
 
 # modify the bucket
 bucket.tags["Environment"] = "Prod"
@@ -73,13 +73,11 @@ updated = hs.render_object(bucket, format=True)
 
 assert updated == '''resource "aws_s3_bucket" "b" {
   bucket = "my-updated-bucket"
-
   tags = {
     Name        = "My bucket"
     Environment = "Prod"
   }
-}
-'''
+}'''
 
 ```
 

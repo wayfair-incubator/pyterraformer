@@ -36,7 +36,8 @@ from pyterraformer.core.generics import (
     ToSet,
 )
 from pyterraformer.core.modules import ModuleObject
-from pyterraformer.core.objects import ObjectMetadata
+from pyterraformer.core.objects import ObjectMetadata, TerraformObject
+from typing import List
 
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
@@ -446,15 +447,7 @@ class ParseToObjects(Transformer):
 TERRAFORM_PARSER = Lark(grammar, start="start", propagate_positions=True)
 
 
-def parse_text(text: str):
-    # if print_flag:
-    #     parsed = TERRAFORM_PARSER.parse(text)
-    #     for row in parsed.children:
-    #         if isinstance(row, Tree):
-    #             for item in row.children:
-    #                 print(item)
-    #         else:
-    #             print(row)
+def parse_text(text: str) -> List[TerraformObject]:
     return ParseToObjects(visit_tokens=True, text=text).transform(
         TERRAFORM_PARSER.parse(text)
     )
