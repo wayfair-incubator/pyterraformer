@@ -8,7 +8,7 @@ class Local(TerraformObject):
             pass_on.append([key, value])
 
         TerraformObject.__init__(
-            self, type="local", original_text=text, attributes=pass_on
+            self, _type="local", original_text=text, attributes=pass_on
         )
 
     # def render(self, variables=None):
