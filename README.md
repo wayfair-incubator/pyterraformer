@@ -61,7 +61,7 @@ example_string = '''resource "aws_s3_bucket" "b" {
 namespace = hs.parse_string(example_string)
 
 # get the bucket from that list
-bucket = namespace.objects[0]
+bucket = namespace[0]
 
 # modify the bucket
 bucket.tags["Environment"] = "Prod"
