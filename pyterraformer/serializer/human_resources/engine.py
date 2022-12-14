@@ -212,9 +212,9 @@ grammar = r"""
 """
 
 
-def args_to_dict(input: list) -> dict[str, Any]:
-    output: dict = {}
-    for array in input:
+def args_to_dict(input_list: list) -> Dict[str, Any]:
+    output: Dict[str, Any] = {}
+    for array in input_list:
         key = array[0]
         val = array[1]
         # a comment might show up as a third object on a line
