@@ -48,11 +48,11 @@ from pyterraformer import HumanSerializer
 
 hs = HumanSerializer(terraform='/path/to/my/terraform/binary')
 
-example_string = '''resource "aws_s3_bucket" "b" {
+example_string:str = '''resource "aws_s3_bucket" "b" {
   bucket = "my-tf-test-bucket"
-
+  
   tags = {
-    Name        = "My bucket"
+Name        = "My bucket"
     Environment = "Dev"
   }
 }'''
@@ -73,13 +73,11 @@ updated = hs.render_object(bucket, format=True)
 
 assert updated == '''resource "aws_s3_bucket" "b" {
   bucket = "my-updated-bucket"
-
   tags = {
     Name        = "My bucket"
     Environment = "Prod"
   }
-}
-'''
+}'''
 
 ```
 

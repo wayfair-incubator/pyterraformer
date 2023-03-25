@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Any
 
 from lark import Lark, Transformer, v_args
 from lark.tree import Meta
@@ -36,14 +36,15 @@ from pyterraformer.core.generics import (
     ToSet,
 )
 from pyterraformer.core.modules import ModuleObject
-from pyterraformer.core.objects import ObjectMetadata
+from pyterraformer.core.objects import ObjectMetadata, TerraformObject
+from typing import List
 
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
 RESOURCES_MAP: Dict = {}
 
 grammar = r"""
-    start: (comment| item | symlink)*
+    start: ( item | symlink)*
     ?item: resource
     | object
     | module
@@ -54,24 +55,27 @@ grammar = r"""
     | data
     | output
     | multiline_comment
+    | comment
 
     //TODO: in parsing - follow symlinks?
     symlink: "."+ "/" /[a-zA-Z_\-]+/ ".tf"
 
-    resource: "resource" string_lit string_lit  "{" (comment| sub_object | lifecycle | provider | split_subarray ) + "}"
+    resource: "resource" string_lit string_lit  "{" (nested_comment| sub_object | lifecycle | provider | split_subarray ) + "}"
+    
+    nested_comment: comment
+    
+    output: "output" string_lit "{"[( nested_comment| sub_object)+] "}"
 
-    output: "output" string_lit "{"[( comment| sub_object)+] "}"
-
-    module: "module" string_lit  "{"  (comment | sub_object | split_subarray)+ "}"
+    module: "module" string_lit  "{"  (nested_comment | sub_object | split_subarray)+ "}"
 
     lifecycle: "lifecycle"  "{" [sub_object ( sub_object)*] "}"
 
     // this exists without the = option as a perf optimization
-    split_subarray: IDENTIFIER "{" [(comment|sub_object|split_subarray)+] "}"
+    split_subarray: IDENTIFIER "{" [(nested_comment|sub_object|split_subarray)+] "}"
 
     provider: "provider" (string_lit | IDENTIFIER)  "{" [(sub_object | split_subarray) ( sub_object| split_subarray)*]  "}"
 
-    data: "data" string_lit string_lit "{" [(sub_object | split_subarray | comment) ( sub_object| split_subarray | comment)*] "}"
+    data: "data" string_lit string_lit "{" [(sub_object | split_subarray | nested_comment) ( sub_object| split_subarray | nested_comment)*] "}"
 
     metadata: "metadata" "{" [sub_object ( sub_object)*] "}"
 
@@ -79,7 +83,7 @@ grammar = r"""
 
     locals: "locals" dict
 
-    variable: "variable" (string_lit | IDENTIFIER) "{" (comment | variable_type_declaration| variable_default_declaration | variable_description)* "}"
+    variable: "variable" (string_lit | IDENTIFIER) "{" (nested_comment | variable_type_declaration| variable_default_declaration | variable_description)* "}"
 
     variable_type_declaration: ("type" | "\"type\"") "=" (types | ( "\""  TYPE"\"" ))
     variable_description: ("description" | "\"description\"") "=" (string_lit | heredoc_eof)
@@ -92,16 +96,16 @@ grammar = r"""
 
     // handling inside items
     // figure out how to handle comments better
-    tuple: "["  [ comment* (string_lit| int_lit| dict| tuple | lookup | EMPTY_STRING )  ( "," comment*  (string_lit| int_lit| dict| tuple | lookup) )*] ","? comment?  "]" -> tuple
+    tuple: "["  [ nested_comment* (string_lit| int_lit| dict| tuple | lookup | EMPTY_STRING )  ( "," nested_comment*  (string_lit| int_lit| dict| tuple | lookup) )*] ","? nested_comment?  "]" -> tuple
 
     // replace with expr_contents
     // figure out why dot identifiers are ever valid
-    sub_object: (IDENTIFIER |string_lit | IDENTIFIER_WITH_DOT) "=" ( setsubtract | lookup | tuple | string_lit | file | toset | concat | merge | boolean | dict | int_lit | object_access |  conditional | heredoc_eof | IDENTIFIER | generic_function | list_comp) ","? comment?   -> sub_object
+    sub_object: (IDENTIFIER |string_lit | IDENTIFIER_WITH_DOT) "=" ( setsubtract | lookup | tuple | string_lit | file | toset | concat | merge | boolean | dict | int_lit | object_access |  conditional | heredoc_eof | IDENTIFIER | generic_function | list_comp) ","? nested_comment?    -> sub_object
 
     // annoyingly repetitive
-    dict_sub_object: (IDENTIFIER |string_lit | IDENTIFIER_WITH_DOT) ("=" | ":") ( setsubtract | lookup | tuple | string_lit | file | toset | concat | merge | boolean | dict | int_lit | object_access |  conditional | heredoc_eof | IDENTIFIER | generic_function | list_comp) ","? comment?   -> sub_object
+    dict_sub_object: (IDENTIFIER |string_lit | IDENTIFIER_WITH_DOT) ("=" | ":") ( setsubtract | lookup | tuple | string_lit | file | toset | concat | merge | boolean | dict | int_lit | object_access |  conditional | heredoc_eof | IDENTIFIER | generic_function | list_comp) ","? nested_comment?  -> sub_object
 
-    dict: "{" (comment | dict_sub_object )* "}"
+    dict: "{" (nested_comment | dict_sub_object )* "}"
 
     object_access: IDENTIFIER "." IDENTIFIER
 
@@ -163,7 +167,7 @@ grammar = r"""
                 | heredoc_template
                 | heredoc_template_trim
                 | list_comp
-                | comment
+                | nested_comment
                 | tuple
                 | null
 
@@ -208,10 +212,16 @@ grammar = r"""
 """
 
 
-def args_to_dict(input: list) -> dict:
-    output = {}
-    # {str(val): key for val, key in args}
-    for key, val in input:
+def args_to_dict(input_list: list) -> Dict[str, Any]:
+    output: Dict[str, Any] = {}
+    for array in input_list:
+        key = array[0]
+        val = array[1]
+        # a comment might show up as a third object on a line
+        # flatten that out
+        if len(array) > 2:
+            nested = array[2]
+            output = {**output, **args_to_dict([nested])}
         if key not in output:
             output[str(key)] = val
         else:
@@ -324,7 +334,12 @@ class ParseToObjects(Transformer):
     def comment(self, meta: Meta, args):
         metadata = self.generate_metadata(meta)
         out = Comment(text=args[0].value, _metadata=metadata)
-        return [f"comment-{metadata.start_pos}", out]
+        return out
+
+    @v_args(meta=True)
+    def nested_comment(self, meta: Meta, args):
+        """Special comment to maintain position within other objects"""
+        return [f"comment-{meta.start_pos}", args[0]]
 
     @v_args(meta=True)
     def multiline_comment(self, meta: Meta, args):
@@ -446,15 +461,7 @@ class ParseToObjects(Transformer):
 TERRAFORM_PARSER = Lark(grammar, start="start", propagate_positions=True)
 
 
-def parse_text(text: str):
-    # if print_flag:
-    #     parsed = TERRAFORM_PARSER.parse(text)
-    #     for row in parsed.children:
-    #         if isinstance(row, Tree):
-    #             for item in row.children:
-    #                 print(item)
-    #         else:
-    #             print(row)
+def parse_text(text: str) -> List[TerraformObject]:
     return ParseToObjects(visit_tokens=True, text=text).transform(
         TERRAFORM_PARSER.parse(text)
     )

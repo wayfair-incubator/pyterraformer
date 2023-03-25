@@ -1,4 +1,5 @@
 from pyterraformer import HumanSerializer
+from pyterraformer.core import TerraformObject
 
 
 def standard_string(string: str):
@@ -156,4 +157,36 @@ def test_comments(human_serializer):
 # separately managed node pools. So we create the smallest possible default
 # node pool and immediately delete it."""
         in rendered
+    )
+
+
+def test_comments_reserialization(human_serializer):
+    base = """resource "aws_s3_bucket" "b" {
+  test = false
+  # maintain position
+  bucket = "my-tf-test-bucket"
+  # this is a helpful comment
+  tags = {
+    Name        = "My bucket"
+    Environment = "Dev"
+  }
+}
+# this is a top level comment
+
+/*
+MULTILINE
+*/
+"""
+
+    parsed_split = human_serializer.parse_string(base)
+    assert len(parsed_split) == 3
+    for object in parsed_split:
+        assert isinstance(object, TerraformObject)
+    resource = parsed_split[0]
+
+    rendered = human_serializer.render_object(resource)
+    assert "# maintain position" in rendered
+    assert "# this is a helpful comment" in rendered
+    assert rendered.find("# maintain position") < rendered.find(
+        "# this is a helpful comment"
     )

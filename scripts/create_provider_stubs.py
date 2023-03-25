@@ -325,7 +325,7 @@ def save_stubs(provider: str, version: str, stubs: dict, path: str):
 
 @click.command()
 @click.option(
-    "--package", help="The package name, eg. hashicorp/aws to create stubs for"
+    "--provider", help="The provider name, eg. hashicorp/aws to create stubs for"
 )
 @click.option("--version", help="The version of the provider to create stubs for. ")
 @click.option("--terraform_path", help="The path of the local terraform binary.")

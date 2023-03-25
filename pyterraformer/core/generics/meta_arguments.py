@@ -7,7 +7,7 @@ from pyterraformer.core.objects import TerraformObject, ObjectMetadata
 class Provider(TerraformObject):
     def __init__(self, type: str, _metadata: Optional[ObjectMetadata] = None, **kwargs):
         self.ptype = str(type).replace('"', "")
-        TerraformObject.__init__(self, type="provider", _metadata=_metadata)
+        TerraformObject.__init__(self, _type="provider", _metadata=_metadata)
 
     def __repr__(self):
         return (

@@ -14,6 +14,7 @@ from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
 from pyterraformer.serializer.base_serializer import BaseSerializer
 from pyterraformer.serializer.human_resources.engine import parse_text
+from pyterraformer.exceptions import TerraformExecutionError
 
 if TYPE_CHECKING:
     from pyterraformer.terraform import Terraform
@@ -111,6 +112,11 @@ class HumanSerializer(BaseSerializer):
             file_name.write_text(string)
             try:
                 self.terraform.run("fmt", path=td)
+            except FileNotFoundError as e:
+                logger.error(str(e))
+                raise TerraformExecutionError(
+                    f"File not found - is the terraform executable path set correctly and accessible to this user? Error: {str(e)}"
+                )
             except CalledProcessError as e:
                 logger.error(f"Unable to format file \n{string}")
                 raise e
