@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pyterraformer"
+dynamic = ["version"]
+authors = [{ name = "", email = "pyterraformer@gmail.com" }]
+description = "Enjoyable terraform manipulation from python."
+readme = { file = "README.md", content-type = "text/markdown" }
+requires-python = ">=3.7"
+classifiers = [
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.7",
+  "Programming Language :: Python :: 3.8",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+]
+
+[tool.setuptools.packages.find]
+exclude = [
+  "dist",
+  "build",
+  "*.tests",
+  "*.tests.*",
+  "tests.*",
+  "tests",
+  "docs",
+  ".github",
+  "",
+  "examples",
+]
+
+[tool.sestuptools.package-data]
+"*" = ["*.tf", "*.jinja", "py.typed"]
+
+[tool.setuptools_scm]
+
+#TODO: convert scripts into actual entrypoint scripts
