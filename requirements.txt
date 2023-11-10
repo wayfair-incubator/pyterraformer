@@ -1,3 +1,4 @@
 jinja2
 lark
 click
+importlib_metadata; python_version < '3.8'

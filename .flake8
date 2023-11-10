@@ -1,7 +1,8 @@
 [flake8]
+count = True
 ignore = F401,C901,F811,E203,W503,E501
 exclude = .git,.github,examples,__pycache__,docs,venv,env,.venv,build,examples
 max-complexity = 10
-max-line-length = 120
+max-line-length = 127
 builtins = unicode
 tee = True
