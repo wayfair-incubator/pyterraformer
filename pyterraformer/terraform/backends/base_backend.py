@@ -6,7 +6,7 @@ from pyterraformer.core.generics import Backend
 
 @dataclass
 class BaseBackend:
-    SECRET_FIELDS: ClassVar = []
+    SECRET_FIELDS: ClassVar[list[str]] = []
 
     def generate_environment(self) -> dict:
         return {}
