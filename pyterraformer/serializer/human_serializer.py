@@ -100,7 +100,7 @@ class HumanSerializer(BaseSerializer):
             except FileNotFoundError as e:
                 logger.error(str(e))
                 raise TerraformExecutionError(
-                    f"File not found - is the terraform executable path set correctly and accessible to this user? Error: {str(e)}"
+                    f"File not found - is the terraform executable path set correctly and accessible to this user? Error: {e}"
                 ) from e
             except CalledProcessError as e:
                 logger.error(f"Unable to format file \n{string}")

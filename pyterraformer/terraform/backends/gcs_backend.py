@@ -6,7 +6,10 @@ from pyterraformer.terraform.backends.base_backend import BaseBackend
 
 @dataclass
 class GCSBackend(BaseBackend):
-    """Stores the state as an object in a configurable prefix in a pre-existing bucket on Google Cloud Storage (GCS). The bucket must exist prior to configuring the backend."""
+    """Stores the state as an object in a configurable prefix in a pre-existing bucket on GCS.
+
+    The bucket must exist prior to configuring the backend.
+    """
 
     credentials: str | None = None
     impersonate_service_account: str | None = None

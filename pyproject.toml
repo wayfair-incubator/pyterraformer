@@ -94,13 +94,12 @@ select = [
     "SIM",  # flake8-simplify
     "S",    # flake8-bandit (security)
 ]
-ignore = [
-    "E501",  # line too long (handled by formatter)
-    "S101",  # assert used (acceptable in tests)
-]
+ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101"]  # assert is standard in pytest
+"pyterraformer/serializer/human_resources/engine.py" = ["E501"]  # grammar strings can't be reformatted
 
 [tool.ruff.lint.isort]
 known-first-party = ["pyterraformer"]

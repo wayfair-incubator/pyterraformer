@@ -117,12 +117,14 @@ class TerraformFile(TerraformNamespace):
         duplicates = self._detect_duplicates(object)
         if duplicates:
             if replace:
-                self.objects = [obj for idx, obj in enumerate(self.objects) if idx not in (duplicates)]
+                self.objects = [obj for idx, obj in enumerate(self.objects) if idx not in duplicates]
             elif exists_okay:
                 return
             else:
+                duplicate_objs = [obj for idx, obj in enumerate(self.objects) if idx in duplicates]
                 raise ValueError(
-                    f"Duplicate resource name or ID detected {[obj for idx, obj in enumerate(self.objects) if idx in (duplicates)]} in file {self.name}! Cannot add unless the 'replace' or 'exists_okay' flags are set."
+                    f"Duplicate resource name or ID detected {duplicate_objs} in file {self.name}! "
+                    f"Cannot add unless the 'replace' or 'exists_okay' flags are set."
                 )
 
         if position == InsertPosition.FIRST:
