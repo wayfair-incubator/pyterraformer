@@ -27,13 +27,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install wheel
           pip install -r requirements.txt -r requirements-test.txt
-      - name: Lint with flake8
+      - name: Lint with ruff
         run: |
-          pip install flake8
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 . --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 . --exit-zero --statistics
+          ruff check .
+          ruff format --check .
+      - name: Type check with mypy
+        run: |
+          mypy pyterraformer --ignore-missing-imports
       - name: Test with pytest
         run: |
           pytest --ignore=docs_src/ --cov=./
