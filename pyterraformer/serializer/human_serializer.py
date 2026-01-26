@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 from dataclasses import asdict, is_dataclass
 from os.path import dirname, join
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 import jinja2
 
@@ -16,12 +18,7 @@ from pyterraformer.serializer.base_serializer import BaseSerializer
 from pyterraformer.serializer.human_resources.engine import parse_text
 
 if TYPE_CHECKING:
-    from pyterraformer.core import (
-        TerraformFile,
-        TerraformNamespace,
-        TerraformObject,
-        TerraformWorkspace,
-    )
+    from pyterraformer.core import TerraformNamespace, TerraformObject, TerraformWorkspace
     from pyterraformer.terraform import Terraform
 
 TEMPLATE_PATH = join(dirname(__file__), "templates")
@@ -39,10 +36,7 @@ def process_attribute(input: Any):
     if not valid:
         return input
 
-    if is_dataclass(input) and not isinstance(input, type):
-        final_input = asdict(input)
-    else:
-        final_input = input
+    final_input = asdict(input) if is_dataclass(input) and not isinstance(input, type) else input
     output: dict[str, Any] = {}
     for key, item in final_input.items():
         if item == EMPTY_DEFAULT:
@@ -70,7 +64,7 @@ def process_attribute(input: Any):
 
 
 class HumanSerializer(BaseSerializer):
-    def __init__(self, terraform: Union[str, "Terraform"] | None = None):
+    def __init__(self, terraform: str | Terraform | None = None):
         from pyterraformer.terraform import Terraform
 
         self.terraform: Terraform | None = None
@@ -79,10 +73,6 @@ class HumanSerializer(BaseSerializer):
         elif terraform:
             self.terraform = Terraform(terraform_exec_path=terraform)
 
-    #
-    # def _format_path(self):
-    #     self.terraform.
-
     @property
     def can_format(self) -> bool:
         return self.terraform is not None
@@ -90,7 +80,7 @@ class HumanSerializer(BaseSerializer):
     def parse_string(self, string: str):
         return parse_text(string)
 
-    def parse_file(self, path: str | Path, workspace: "TerraformWorkspace"):
+    def parse_file(self, path: str | Path, workspace: TerraformWorkspace):
         from pyterraformer.core.namespace import TerraformFile
 
         with open(path) as f:
@@ -110,14 +100,14 @@ class HumanSerializer(BaseSerializer):
             except FileNotFoundError as e:
                 logger.error(str(e))
                 raise TerraformExecutionError(
-                    f"File not found - is the terraform executable path set correctly and accessible to this user? Error: {str(e)}"
-                )
+                    f"File not found - is the terraform executable path set correctly and accessible to this user? Error: {e}"
+                ) from e
             except CalledProcessError as e:
                 logger.error(f"Unable to format file \n{string}")
                 raise e
             return file_name.open().read()
 
-    def render_object(self, object: "TerraformObject", format: bool | None = None) -> str:
+    def render_object(self, object: TerraformObject, format: bool | None = None) -> str:
         if format and not self.can_format:
             raise ValueError("No terraform executable configured, cannot format.")
         from pyterraformer.core.generics import TerraformConfig
@@ -127,7 +117,7 @@ class HumanSerializer(BaseSerializer):
         variables["tf_id"] = object.tf_id
         variables["type"] = object._type
         final = {}
-        for key in object.render_variables.keys():
+        for key in object.render_variables:
             if key not in final:
                 final[key] = object.render_variables[key]
         if isinstance(object, TerraformConfig):
@@ -139,16 +129,13 @@ class HumanSerializer(BaseSerializer):
         else:
             template_name = "generic.tf"
         template = env.get_template(template_name)
-        # print(final)
-        # print(process_attribute(final))
-        # raise ValueError
         string = template.render(render_attributes=process_attribute(final), **variables)
 
         if format:
             string = self._format_string(string)
         return string
 
-    def render_namespace(self, namespace: "TerraformNamespace", format: bool | None = None) -> str:
+    def render_namespace(self, namespace: TerraformNamespace, format: bool | None = None) -> str:
         from pyterraformer.core.generics import Comment
 
         format = format if format is not None else self.can_format
@@ -169,7 +156,7 @@ class HumanSerializer(BaseSerializer):
             return self._format_string(string)
         return "".join(out)
 
-    def render_workspace(self, workspace: "TerraformWorkspace", format: bool | None = None) -> dict[str, str]:
+    def render_workspace(self, workspace: TerraformWorkspace, format: bool | None = None) -> dict[str, str]:
         format = format if format is not None else self.can_format
         output = {}
         for name, file in workspace.files.items():

@@ -94,24 +94,12 @@ select = [
     "SIM",  # flake8-simplify
     "S",    # flake8-bandit (security)
 ]
-ignore = [
-    "E501",   # line too long (handled by formatter)
-    "S101",   # assert used (acceptable in tests)
-    "S603",   # subprocess call - false positive for trusted input
-    "F401",   # unused imports (in __init__.py files)
-    "F811",   # redefinition of unused name
-    "C901",   # too complex
-    "UP035",  # deprecated typing imports (Dict, List, etc.) - keep for compatibility
-    "B904",   # raise from in except clause - not critical
-    "E402",   # module level import not at top of file - needed for template strings
-    "SIM101", # multiple isinstance calls - keep for readability
-    "SIM108", # ternary operator - keep if-else for readability
-    "SIM114", # combine if branches - keep for readability
-    "SIM118", # key in dict.keys() - keep for clarity
-]
+ignore = []
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
+"tests/**/*.py" = ["S101"]  # assert is standard in pytest
+"pyterraformer/serializer/human_resources/engine.py" = ["E501"]  # grammar strings can't be reformatted
 
 [tool.ruff.lint.isort]
 known-first-party = ["pyterraformer"]

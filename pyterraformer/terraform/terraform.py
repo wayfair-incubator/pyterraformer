@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass, field
 from subprocess import CalledProcessError
 from subprocess import run as sub_run
-from typing import List, Optional, Union
 
 from pyterraformer.constants import logger
 from pyterraformer.settings import get_default_terraform_location
@@ -53,7 +52,7 @@ class Terraform:
         cmd_array: list[str] = [self.terraform_exec_path, *arguments]
 
         def run_cmd():
-            return sub_run(
+            return sub_run(  # noqa: S603
                 cmd_array,
                 cwd=path,
                 env=runtime_env,

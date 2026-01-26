@@ -18,9 +18,11 @@ StringLit
             PropertyLookup -> Resolve Left to Right
 """
 
+from __future__ import annotations
+
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformFile
@@ -59,7 +61,7 @@ def variable_helper(arg, workspace, file, parent, parent_instance):
 
 
 class FileLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         for _key, file in workspace.files.items():
             for object in file.objects:
                 if hasattr(object, "tf_id"):
@@ -69,8 +71,7 @@ class FileLookupInstantiator(Resolvable):
 
 
 class FileObjectLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
-        # TODO: 2022-06-05 figure out how to do this bette
+    def __init__(self, workspace: TerraformWorkspace):
         from pyterraformer.core.namespace import LazyFile
 
         self.workspace = workspace
@@ -102,7 +103,7 @@ class FileObjectSubClassLookupInstantiator(Resolvable):
 
 
 class DataLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         self.workspace = workspace
 
     def __getattr__(self, item):
@@ -120,13 +121,13 @@ class DataSubClassLookupInstantiator(Resolvable):
 
 
 class VariableLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         for key, value in workspace.variables.items():
             setattr(self, key, value)
 
 
 class TerraformLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         if workspace.terraform:
             self.workspace = workspace.terraform.workspace
         else:
@@ -134,7 +135,7 @@ class TerraformLookupInstantiator(Resolvable):
 
 
 class LocalLookupInstantiator(Resolvable):
-    def __init__(self, file: "TerraformFile"):
+    def __init__(self, file: TerraformFile):
         for key, value in file.locals.items():
             setattr(self, key, value)
 
@@ -174,7 +175,6 @@ class Interpolation(Resolvable):
 class DictLookup(Resolvable):
     def __init__(self, base, lookup):
         self.base = base
-        # TODO don't return a list here
         self.contents = lookup
         # the lookup will be a nested list
         self.lookup = lookup[0]
@@ -197,7 +197,6 @@ class DictLookup(Resolvable):
 class ArrayLookup(Resolvable):
     def __init__(self, base, lookup):
         self.base = base
-        # TODO don't return a list here
         self.contents = lookup
         # the lookup will be a nested list
         self.lookup = lookup[0]
@@ -228,8 +227,8 @@ class PropertyLookup(Resolvable):
 
     def resolve(
         self,
-        workspace: "TerraformWorkspace",
-        file: "TerraformFile",
+        workspace: TerraformWorkspace,
+        file: TerraformFile,
         parent: Resolvable | None = None,
         parent_instance: Resolvable | None = None,
     ):
@@ -373,15 +372,6 @@ class Types(Resolvable):
         return "types({})".format(",".join([item.__repr__() for item in self.items]))
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
-        # final = []
-        # for item in self.items:
-        #     if isinstance(parent_instance, PropertyLookup):
-        #         resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
-        #         out = resolved
-        #     else:
-        #         out = item
-        #     final.append(out)
-        # concat = ",".join(final)
         return "types({})".format(",".join([item.__repr__() for item in self.items]))
 
 
@@ -471,7 +461,6 @@ class Parenthetical(Resolvable):
         return "({})".format("".join([val.__repr__() for val in self.contents]))
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
-        # parent = None
         parent_instance = self
         resolve = deepcopy(self.contents)
         while resolve:
@@ -626,7 +615,6 @@ class LegacySplat(Resolvable):
         return "{}".format(*[val.__repr__() for val in self.contents[:1]])
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
-        # parent = None
         parent_instance = self
         resolve = deepcopy(self.contents)
         while resolve:

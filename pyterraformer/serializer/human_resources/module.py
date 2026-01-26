@@ -1,5 +1,3 @@
-from typing import List
-
 from pyterraformer.core.generics import Literal
 from pyterraformer.core.objects import TerraformObject
 
@@ -33,8 +31,6 @@ class BaseModule(TerraformObject):
     def version(self):
         if self.filterered_source.startswith("http"):
             return extract_http_version(self.filterered_source)
-        # elif self.filtered_source.startswith('git'):
-        #     return extract_http_version(self.filterered_source)
         else:
             raise ValueError(f"Unable to parse version from source {self.source}")
 

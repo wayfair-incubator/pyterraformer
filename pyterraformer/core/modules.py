@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pyterraformer.core.objects import ObjectMetadata, TerraformObject
 
 

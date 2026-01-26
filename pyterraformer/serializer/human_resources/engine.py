@@ -1,5 +1,5 @@
 import builtins
-from typing import Any, Dict, List, Tuple
+from typing import Any
 
 from lark import Lark, Transformer, v_args
 from lark.tree import Meta
@@ -38,8 +38,6 @@ from pyterraformer.core.generics import (
 )
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.objects import ObjectMetadata, TerraformObject
-
-# TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
 RESOURCES_MAP: dict = {}
 
@@ -266,9 +264,6 @@ class ParseToObjects(Transformer):
         _type = str(_type).replace('"', "")
         object_type = RESOURCES_MAP.get(_type, ResourceObject)
         object_type._type = _type
-        # out = RESOURCES_MAP[str(type).replace('"', "")](
-        #     name, str(type), , args[2:]
-        # )
         remaining = args[2:]
         parsed = args_to_dict(remaining)
         return object_type(tf_id=name, _metadata=metadata, **parsed)

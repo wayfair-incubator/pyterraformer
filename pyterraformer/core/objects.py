@@ -1,7 +1,7 @@
-from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Optional
+from __future__ import annotations
 
-from pyterraformer.exceptions import ValidationError
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformNamespace
@@ -28,14 +28,6 @@ class TerraformObject:
         self.tf_id = tf_id
         arguments = kwargs or {}
         self.render_variables: dict[str, str] = {str(key): value for key, value in arguments.items()}
-        # for attribute in self.attributes:
-        #     if isinstance(attribute, list):
-        #         # always cast keys to string
-        #         self.render_variables[str(attribute[0])] = attribute[1]
-        #     elif isinstance(attribute, Block):
-        #         base = self.render_variables.get(attribute.name, Block())
-        #         base.append(attribute)
-        #         self.render_variables[attribute.name] = base
         self._type: str = _type
         self._changed: bool = False
         self._workspace = None
@@ -101,9 +93,7 @@ class TerraformObject:
 
         if isinstance(item, list):
             resolved = [self.resolve_item(sub_item) for sub_item in item]
-        elif isinstance(item, str):
-            resolved = item
-        elif isinstance(item, int):
+        elif isinstance(item, (str, int)):
             resolved = item
         elif isinstance(item, dict):
             resolved = {self.resolve_item(key): self.resolve_item(value) for key, value in item.items()}

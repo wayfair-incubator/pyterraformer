@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import re
 from collections import defaultdict
 from fnmatch import fnmatch
 from os.path import dirname
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from pyterraformer.constants import logger
 from pyterraformer.core.generics import BlockList, Literal
@@ -19,17 +21,12 @@ if TYPE_CHECKING:
 def process_attribute(input: Any, level=0):
     from pyterraformer.core.generics import Variable
 
-    # if isinstance(input, Block):
-    #     input = {input.name: input._keys}
-
     if not isinstance(input, dict):
         return input
     output: dict[str, Any] = {}
     for key, item in input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
-        # elif isinstance(item, StringLit):
-        #     output[key] = item.__repr__()
         elif isinstance(item, Literal):
             output[key] = item
         elif isinstance(item, BlockList):
@@ -90,8 +87,8 @@ class TerraformWorkspace:
         path: str | PurePath,
         terraform: Terraform | None = None,
         serializer: BaseSerializer | None = None,
-        files: list["TerraformFile"] | None = None,
-        children: list["TerraformWorkspace"] | None = None,
+        files: list[TerraformFile] | None = None,
+        children: list[TerraformWorkspace] | None = None,
     ):
         self.terraform = terraform
         self.path = str(path)
@@ -116,7 +113,7 @@ class TerraformWorkspace:
     def relative_path(self, path: str):
         return get_root(str(self._path), path)
 
-    def get_file_safe(self, name: str) -> "TerraformFile":
+    def get_file_safe(self, name: str) -> TerraformFile:
         from pyterraformer.core.namespace import TerraformFile
 
         out = self.files.get(name)
@@ -153,7 +150,7 @@ class TerraformWorkspace:
         required_providers[0][name] = {"source": source, **kwargs}
         existing.required_providers = required_providers
 
-    def add_file(self, file: Union["TerraformFile", PurePath, str]) -> "TerraformFile":
+    def add_file(self, file: TerraformFile | PurePath | str) -> TerraformFile:
         from pyterraformer.core.namespace import TerraformFile
 
         if isinstance(file, TerraformFile):
