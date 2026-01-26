@@ -120,7 +120,7 @@ if __name__ == "__main__":
         }]),
         cors=BlockList([{
             'origin': [
-                "https://readthedocs.org"],
+                "https://example.com"],
             'method': [
                 "GET",
                 "HEAD",
@@ -148,6 +148,10 @@ directories, files, apply terraform directly, and get IDE auto-completion for yo
 been used extensively in internal projects, the open-source version contains significant rewrites for improved flexibility. 
 We’re iterating fast and are likely to introduce breaking changes to existing APIs to improve the developer experience.
 Feedback is appreciated.
+
+### Requirements
+
+- Python 3.10 or higher
 
 ### Installation
 
@@ -179,7 +183,7 @@ Documentation is available in this repository. See the examples in this README a
 
 ## Roadmap
 
-See the [open issues](https://github.com/org_name/repo_name/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/wayfair-incubator/pyterraformer/issues) for a list of proposed features (and known issues).
 
 ## Contributing
 
@@ -193,7 +197,7 @@ Distributed under the `MIT License` License. See `LICENSE` for more information.
 
 ## Contact
 
-Project Link: [https://github.com/org_name/repo_name](https://github.com/org_name/repo_name)
+Project Link: [https://github.com/wayfair-incubator/pyterraformer](https://github.com/wayfair-incubator/pyterraformer)
 
 ## Acknowledgements
 
