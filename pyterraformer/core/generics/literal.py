@@ -1,4 +1,4 @@
-class Literal(object):
+class Literal:
     def __init__(self, str):
         self.value = str
 

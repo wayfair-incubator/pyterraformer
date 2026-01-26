@@ -1,4 +1,4 @@
-from .namespace import TerraformNamespace, TerraformFile
+from .namespace import TerraformFile, TerraformNamespace
 from .objects import TerraformObject
 from .workspace import TerraformWorkspace
 

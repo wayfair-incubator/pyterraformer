@@ -3,18 +3,17 @@ from collections import defaultdict
 from fnmatch import fnmatch
 from os.path import dirname
 from pathlib import Path, PurePath
-from typing import Dict, List, Union, Any
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from pyterraformer.constants import logger
-from pyterraformer.core.generics import Literal, BlockList
+from pyterraformer.core.generics import BlockList, Literal
 from pyterraformer.core.utility import get_root
 from pyterraformer.serializer import BaseSerializer
 from pyterraformer.terraform import Terraform
 
 if TYPE_CHECKING:
-    from pyterraformer.core.namespace import TerraformFile
     from pyterraformer.core.generics.variables import Variable
+    from pyterraformer.core.namespace import TerraformFile
 
 
 def process_attribute(input: Any, level=0):
@@ -25,7 +24,7 @@ def process_attribute(input: Any, level=0):
 
     if not isinstance(input, dict):
         return input
-    output: Dict[str, Any] = {}
+    output: dict[str, Any] = {}
     for key, item in input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
@@ -38,7 +37,7 @@ def process_attribute(input: Any, level=0):
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
         elif isinstance(item, dict):
             output[key] = process_attribute(item)
-        elif isinstance(item, List):
+        elif isinstance(item, list):
             output[key] = [process_attribute(sub_item) for sub_item in item]
         else:
             output[key] = item
@@ -81,33 +80,30 @@ class LazyFileDict(dict):
 
 
 def extract_errors(input: str):
-    found = re.findall(
-        r"(Error:.*)(?:Error:|$)", input, re.IGNORECASE | re.MULTILINE | re.DOTALL
-    )
+    found = re.findall(r"(Error:.*)(?:Error:|$)", input, re.IGNORECASE | re.MULTILINE | re.DOTALL)
     return "\n".join(found).strip()
 
 
-class TerraformWorkspace(object):
+class TerraformWorkspace:
     def __init__(
         self,
-        path: Union[str, PurePath],
-        terraform: Optional[Terraform] = None,
-        serializer: Optional[BaseSerializer] = None,
-        files: Optional[List["TerraformFile"]] = None,
-        children: Optional[List["TerraformWorkspace"]] = None,
+        path: str | PurePath,
+        terraform: Terraform | None = None,
+        serializer: BaseSerializer | None = None,
+        files: list["TerraformFile"] | None = None,
+        children: list["TerraformWorkspace"] | None = None,
     ):
-
         self.terraform = terraform
         self.path = str(path)
         self._path = Path(self.path)
-        self.files: Dict[str, TerraformFile] = LazyFileDict()
+        self.files: dict[str, TerraformFile] = LazyFileDict()
         if files:
             for file in files:
                 self.files[file.name] = files
-        self.children: List[TerraformWorkspace] = children or []
+        self.children: list[TerraformWorkspace] = children or []
         self.name = self._path.stem
-        self.variables: Dict[str, "Variable"] = {}
-        self.data: List = []
+        self.variables: dict[str, Variable] = {}
+        self.data: list = []
         self.serializer = serializer
 
     def apply(self):
@@ -130,22 +126,17 @@ class TerraformWorkspace(object):
                     raise FileNotFoundError("No valid serializer found.")
                 file = self.serializer.parse_file(self._path / name, self)
             except FileNotFoundError:
-                file = TerraformFile(
-                    workspace=self, text="", location=self._path / name
-                )
+                file = TerraformFile(workspace=self, text="", location=self._path / name)
 
             self.files[name] = file
 
         return self.files[name]
 
     def get_terraform_config(self):
-        from pyterraformer.core.generics import TerraformConfig
-        from pyterraformer.core.generics import BlockList
+        from pyterraformer.core.generics import BlockList, TerraformConfig
 
         terraform = self.get_file_safe("terraform.tf")
-        existing = [
-            obj for obj in terraform.objects if isinstance(obj, TerraformConfig)
-        ]
+        existing = [obj for obj in terraform.objects if isinstance(obj, TerraformConfig)]
         if existing:
             return existing[0]
         logger.info("creating new terraform config")
@@ -176,15 +167,11 @@ class TerraformWorkspace(object):
             return nfile
 
     def add_child_workspace(self, path: str):
-        child = TerraformWorkspace(
-            path=path, serializer=self.serializer, terraform=self.terraform
-        )
+        child = TerraformWorkspace(path=path, serializer=self.serializer, terraform=self.terraform)
         self.children.append(child)
         setattr(self, child.name, child)
 
-    def add_variable(
-        self, key: str, values, exists_okay: bool = False, replace: bool = False
-    ):
+    def add_variable(self, key: str, values, exists_okay: bool = False, replace: bool = False):
         from pyterraformer.core.generics.variables import Variable
 
         if key in self.variables:
@@ -209,9 +196,7 @@ class TerraformWorkspace(object):
         self.variables[key] = variable
         # create if not exists
         if "variables.tf" not in self.files:
-            self.files["variables.tf"] = TerraformFile(
-                self, "", self._path / "variables.tf"
-            )
+            self.files["variables.tf"] = TerraformFile(self, "", self._path / "variables.tf")
 
         self.files["variables.tf"].add_object(variable, replace=replace)
         return variable
@@ -231,7 +216,7 @@ class TerraformWorkspace(object):
         if not self.serializer:
             raise ValueError("Cannot save without serializer defined.")
         format = False
-        for key, file in self.files.items(resolve=False):  # type: ignore
+        for _key, file in self.files.items(resolve=False):  # type: ignore
             # skip files we never touched
             if isinstance(file, LazyFile):
                 logger.info("Skipping lazily unparsed file")
@@ -276,14 +261,12 @@ class TerraformWorkspace(object):
         return output
 
     def get_object(self, **kwargs):
-        for key, file in self.files.items():
+        for _key, file in self.files.items():
             try:
                 return file.get_object(**kwargs)
             except ValueError:
                 pass
-        raise ValueError(
-            f"No object matching filter criteria {kwargs} found in any files in {self.path}"
-        )
+        raise ValueError(f"No object matching filter criteria {kwargs} found in any files in {self.path}")
 
 
 def value_match(item: Any, value: Any) -> bool:

@@ -5,8 +5,8 @@ from pyterraformer.core.objects import TerraformObject
 
 
 class BaseModule(TerraformObject):
-    REQUIRED_ATTRIBUTES: List[str] = []
-    PRIORITY_ATTRIBUTES: List[str] = []
+    REQUIRED_ATTRIBUTES: list[str] = []
+    PRIORITY_ATTRIBUTES: list[str] = []
 
     def __init__(self, text, name, attributes):
         self._name = str(name).replace('"', "")

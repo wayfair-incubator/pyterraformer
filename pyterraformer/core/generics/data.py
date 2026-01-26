@@ -11,11 +11,7 @@ class Data(TerraformObject):
 
     def __repr__(self):
         return (
-            f"{self._type}({self.name})("
-            + ", ".join(
-                [f'{key}="{val}"' for key, val in self.render_variables.items()]
-            )
-            + ")"
+            f"{self._type}({self.name})(" + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()]) + ")"
         )
 
     #

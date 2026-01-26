@@ -2,32 +2,32 @@ from .backend import Backend
 from .comment import Comment
 from .data import Data
 from .interpolation import (
-    Interpolation,
-    DictLookup,
-    PropertyLookup,
-    StringLit,
-    String,
-    Expression,
-    Conditional,
+    ArrayLookup,
     BinaryOp,
     BinaryOperator,
     BinaryTerm,
-    Parenthetical,
-    File,
     Boolean,
-    Merge,
     Concat,
-    Replace,
-    Types,
-    ArrayLookup,
+    Conditional,
+    DictLookup,
+    Expression,
+    File,
     GenericFunction,
-    Symlink,
+    Interpolation,
     LegacySplat,
+    Merge,
+    Parenthetical,
+    PropertyLookup,
+    Replace,
+    String,
+    StringLit,
+    Symlink,
     ToSet,
+    Types,
 )
 from .literal import Literal
 from .local import Local
-from .meta_arguments import DependsOn, Provider, ForEach, Count, Lifecycle
+from .meta_arguments import Count, DependsOn, ForEach, Lifecycle, Provider
 from .metadata import Metadata
 from .output import Output
 from .terraform import TerraformConfig

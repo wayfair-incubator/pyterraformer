@@ -1,40 +1,37 @@
-from os.path import join, dirname
+from dataclasses import asdict, is_dataclass
+from os.path import dirname, join
 from pathlib import Path
 from subprocess import CalledProcessError
 from tempfile import TemporaryDirectory
-from typing import Optional, Dict, Union, TYPE_CHECKING, Any, List
-from dataclasses import is_dataclass, asdict
-
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import jinja2
 
-from pyterraformer.constants import logger, EMPTY_DEFAULT
+from pyterraformer.constants import EMPTY_DEFAULT, logger
 from pyterraformer.core.generics import Backend, Comment
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.resources import ResourceObject
+from pyterraformer.exceptions import TerraformExecutionError
 from pyterraformer.serializer.base_serializer import BaseSerializer
 from pyterraformer.serializer.human_resources.engine import parse_text
-from pyterraformer.exceptions import TerraformExecutionError
 
 if TYPE_CHECKING:
-    from pyterraformer.terraform import Terraform
     from pyterraformer.core import (
-        TerraformWorkspace,
-        TerraformObject,
-        TerraformNamespace,
         TerraformFile,
+        TerraformNamespace,
+        TerraformObject,
+        TerraformWorkspace,
     )
+    from pyterraformer.terraform import Terraform
 
 TEMPLATE_PATH = join(dirname(__file__), "templates")
 
 template_loader = jinja2.FileSystemLoader(searchpath=TEMPLATE_PATH)
-env = jinja2.Environment(
-    loader=template_loader, autoescape=True, keep_trailing_newline=True
-)
+env = jinja2.Environment(loader=template_loader, autoescape=True, keep_trailing_newline=True)
 
 
 def process_attribute(input: Any):
-    from pyterraformer.core.generics import Variable, Literal, BlockList, BlockSet
+    from pyterraformer.core.generics import BlockList, BlockSet, Literal, Variable
 
     valid = False
     if isinstance(input, dict) or is_dataclass(input):
@@ -42,11 +39,11 @@ def process_attribute(input: Any):
     if not valid:
         return input
 
-    if is_dataclass(input):
+    if is_dataclass(input) and not isinstance(input, type):
         final_input = asdict(input)
     else:
         final_input = input
-    output: Dict[str, Any] = {}
+    output: dict[str, Any] = {}
     for key, item in final_input.items():
         if item == EMPTY_DEFAULT:
             continue
@@ -56,16 +53,16 @@ def process_attribute(input: Any):
             output[key] = item
         elif str(key).startswith("comment-") and isinstance(item, Comment):
             output[key] = Literal(item.text)
-        elif isinstance(item, (BlockList, BlockSet)):
+        elif isinstance(item, BlockList | BlockSet):
             for idx, sub_item in enumerate(item):  # type: ignore
                 output[f"{key}~~block_{idx}"] = process_attribute(sub_item)
-        elif is_dataclass(item):
+        elif is_dataclass(item) and not isinstance(item, type):
             output[f"{key}~~block_0"] = process_attribute(asdict(item))
         elif isinstance(item, Backend):
             output[f"{key}~~block_0"] = process_attribute(item)
         elif isinstance(item, dict):
             output[key] = process_attribute(item)
-        elif isinstance(item, List):
+        elif isinstance(item, list):
             output[key] = [process_attribute(sub_item) for sub_item in item]
         else:
             output[key] = item
@@ -73,10 +70,10 @@ def process_attribute(input: Any):
 
 
 class HumanSerializer(BaseSerializer):
-    def __init__(self, terraform: Optional[Union[str, "Terraform"]] = None):
+    def __init__(self, terraform: Union[str, "Terraform"] | None = None):
         from pyterraformer.terraform import Terraform
 
-        self.terraform: Optional[Terraform] = None
+        self.terraform: Terraform | None = None
         if isinstance(terraform, Terraform):
             self.terraform = terraform
         elif terraform:
@@ -93,15 +90,13 @@ class HumanSerializer(BaseSerializer):
     def parse_string(self, string: str):
         return parse_text(string)
 
-    def parse_file(self, path: Union[str, Path], workspace: "TerraformWorkspace"):
+    def parse_file(self, path: str | Path, workspace: "TerraformWorkspace"):
         from pyterraformer.core.namespace import TerraformFile
 
-        with open(path, "r") as f:
+        with open(path) as f:
             text = f.read()
             objects = self.parse_string(string=text)
-        return TerraformFile(
-            location=path, workspace=workspace, objects=objects, text=text
-        )
+        return TerraformFile(location=path, workspace=workspace, objects=objects, text=text)
 
     def _format_string(self, string: str) -> str:
         if not self.terraform:
@@ -122,9 +117,7 @@ class HumanSerializer(BaseSerializer):
                 raise e
             return file_name.open().read()
 
-    def render_object(
-        self, object: "TerraformObject", format: Optional[bool] = None
-    ) -> str:
+    def render_object(self, object: "TerraformObject", format: bool | None = None) -> str:
         if format and not self.can_format:
             raise ValueError("No terraform executable configured, cannot format.")
         from pyterraformer.core.generics import TerraformConfig
@@ -149,17 +142,13 @@ class HumanSerializer(BaseSerializer):
         # print(final)
         # print(process_attribute(final))
         # raise ValueError
-        string = template.render(
-            render_attributes=process_attribute(final), **variables
-        )
+        string = template.render(render_attributes=process_attribute(final), **variables)
 
         if format:
             string = self._format_string(string)
         return string
 
-    def render_namespace(
-        self, namespace: "TerraformNamespace", format: Optional[bool] = None
-    ) -> str:
+    def render_namespace(self, namespace: "TerraformNamespace", format: bool | None = None) -> str:
         from pyterraformer.core.generics import Comment
 
         format = format if format is not None else self.can_format
@@ -180,9 +169,7 @@ class HumanSerializer(BaseSerializer):
             return self._format_string(string)
         return "".join(out)
 
-    def render_workspace(
-        self, workspace: "TerraformWorkspace", format: Optional[bool] = None
-    ) -> Dict[str, str]:
+    def render_workspace(self, workspace: "TerraformWorkspace", format: bool | None = None) -> dict[str, str]:
         format = format if format is not None else self.can_format
         output = {}
         for name, file in workspace.files.items():

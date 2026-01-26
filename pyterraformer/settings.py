@@ -2,7 +2,7 @@ from os import environ
 from typing import Optional
 
 
-def get_default_terraform_location() -> Optional[str]:
+def get_default_terraform_location() -> str | None:
     """Attempt to discover default terraform location"""
     declared_path = environ.get("TERRAFORM_EXEC", None)
     if declared_path:

@@ -1,47 +1,47 @@
-from typing import Dict, Tuple, Any
+import builtins
+from typing import Any, Dict, List, Tuple
 
 from lark import Lark, Transformer, v_args
 from lark.tree import Meta
 
 from pyterraformer.core.generics import (
-    Comment,
-    Variable,
-    Interpolation,
-    String,
-    StringLit,
-    DictLookup,
-    PropertyLookup,
-    TerraformConfig,
-    Provider,
-    BinaryTerm,
-    Data,
-    Expression,
-    Conditional,
+    ArrayLookup,
     BinaryOp,
     BinaryOperator,
-    Output,
-    Local,
-    Parenthetical,
-    LegacySplat,
+    BinaryTerm,
     BlockList,
-    File,
     Boolean,
-    Merge,
+    Comment,
     Concat,
-    Types,
-    Replace,
-    ArrayLookup,
+    Conditional,
+    Data,
+    DictLookup,
+    Expression,
+    File,
     GenericFunction,
+    Interpolation,
+    LegacySplat,
+    Local,
+    Merge,
+    Output,
+    Parenthetical,
+    PropertyLookup,
+    Provider,
+    Replace,
+    String,
+    StringLit,
     Symlink,
+    TerraformConfig,
     ToSet,
+    Types,
+    Variable,
 )
 from pyterraformer.core.modules import ModuleObject
 from pyterraformer.core.objects import ObjectMetadata, TerraformObject
-from typing import List
 
 # TODO: rewrite to comply with https://github.com/hashicorp/hcl2/blob/master/hcl/hclsyntax/spec.md
 
-RESOURCES_MAP: Dict = {}
+RESOURCES_MAP: dict = {}
 
 grammar = r"""
     start: ( item | symlink)*
@@ -61,9 +61,9 @@ grammar = r"""
     symlink: "."+ "/" /[a-zA-Z_\-]+/ ".tf"
 
     resource: "resource" string_lit string_lit  "{" (nested_comment| sub_object | lifecycle | provider | split_subarray ) + "}"
-    
+
     nested_comment: comment
-    
+
     output: "output" string_lit "{"[( nested_comment| sub_object)+] "}"
 
     module: "module" string_lit  "{"  (nested_comment | sub_object | split_subarray)+ "}"
@@ -212,8 +212,8 @@ grammar = r"""
 """
 
 
-def args_to_dict(input_list: list) -> Dict[str, Any]:
-    output: Dict[str, Any] = {}
+def args_to_dict(input_list: list) -> dict[str, Any]:
+    output: dict[str, Any] = {}
     for array in input_list:
         key = array[0]
         val = array[1]
@@ -310,9 +310,7 @@ class ParseToObjects(Transformer):
     def terraform(self, meta: Meta, args):
         from pyterraformer.core.objects import ObjectMetadata
 
-        metadata = ObjectMetadata(
-            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
-        )
+        metadata = ObjectMetadata(orig_text=self.meta_to_text(meta), row_num=meta.start_pos)
 
         parsed = args_to_dict(args)
         return TerraformConfig(_metadata=metadata, **parsed)
@@ -343,9 +341,7 @@ class ParseToObjects(Transformer):
 
     @v_args(meta=True)
     def multiline_comment(self, meta: Meta, args):
-        metadata = ObjectMetadata(
-            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
-        )
+        metadata = ObjectMetadata(orig_text=self.meta_to_text(meta), row_num=meta.start_pos)
         base = args[0].value
         if len(args) > 1:
             base += args[1].value
@@ -356,9 +352,7 @@ class ParseToObjects(Transformer):
     def backend(self, meta: Meta, args):
         from pyterraformer.core.generics import Backend
 
-        metadata = ObjectMetadata(
-            orig_text=self.meta_to_text(meta), row_num=meta.start_pos
-        )
+        metadata = ObjectMetadata(orig_text=self.meta_to_text(meta), row_num=meta.start_pos)
         return "backend", Backend(args[0], _metadata=metadata)
 
     def output(self, args):
@@ -443,7 +437,7 @@ class ParseToObjects(Transformer):
     def bool_token(self, args):
         return str(args[0].value)
 
-    def split_subarray(self, args: list) -> Tuple[str, BlockList]:
+    def split_subarray(self, args: list) -> builtins.tuple[str, BlockList]:
         name = args[0]
         return (
             name,
@@ -461,7 +455,5 @@ class ParseToObjects(Transformer):
 TERRAFORM_PARSER = Lark(grammar, start="start", propagate_positions=True)
 
 
-def parse_text(text: str) -> List[TerraformObject]:
-    return ParseToObjects(visit_tokens=True, text=text).transform(
-        TERRAFORM_PARSER.parse(text)
-    )
+def parse_text(text: str) -> list[TerraformObject]:
+    return ParseToObjects(visit_tokens=True, text=text).transform(TERRAFORM_PARSER.parse(text))

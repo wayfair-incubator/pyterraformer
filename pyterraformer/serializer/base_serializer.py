@@ -1,15 +1,15 @@
-from typing import Optional, Dict, TYPE_CHECKING, Union
 from pathlib import Path
+from typing import TYPE_CHECKING, Dict, Optional, Union
 
 if TYPE_CHECKING:
     from pyterraformer.core import (
-        TerraformWorkspace,
-        TerraformObject,
         TerraformNamespace,
+        TerraformObject,
+        TerraformWorkspace,
     )
 
 
-class BaseSerializer(object):
+class BaseSerializer:
     pass
 
     @property
@@ -19,23 +19,19 @@ class BaseSerializer(object):
     def parse_string(self, string: str):
         raise NotImplementedError
 
-    def parse_file(self, path: Union[str, Path], workspace: "TerraformWorkspace"):
+    def parse_file(self, path: str | Path, workspace: "TerraformWorkspace"):
         raise NotImplementedError
 
     def _format_string(self, string: str):
         raise NotImplementedError
 
-    def render_object(
-        self, object: "TerraformObject", format: Optional[bool] = None
-    ) -> str:
+    def render_object(self, object: "TerraformObject", format: bool | None = None) -> str:
         raise NotImplementedError
 
-    def render_namespace(
-        self, namespace: "TerraformNamespace", format: Optional[bool] = None
-    ) -> str:
+    def render_namespace(self, namespace: "TerraformNamespace", format: bool | None = None) -> str:
         raise NotImplementedError
 
-    def render_workspace(self, workspace: "TerraformWorkspace") -> Dict[str, str]:
+    def render_workspace(self, workspace: "TerraformWorkspace") -> dict[str, str]:
         raise NotImplementedError
 
     #

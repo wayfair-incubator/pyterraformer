@@ -1,18 +1,19 @@
 import atexit
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Optional, Dict
+from typing import Dict, Optional
+
 from pyterraformer.core.generics import Backend
 from pyterraformer.terraform.backends.base_backend import BaseBackend
 
 
 @dataclass
 class LocalBackend(BaseBackend):
-    path: Optional[str] = None
-    workspace_dir: Optional[str] = None
+    path: str | None = None
+    workspace_dir: str | None = None
 
-    def generate_environment(self) -> Dict:
-        output: Dict = {}
+    def generate_environment(self) -> dict:
+        output: dict = {}
         return output
 
     def as_object(self) -> Backend:

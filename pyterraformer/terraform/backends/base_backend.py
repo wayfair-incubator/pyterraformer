@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Dict, ClassVar
+from typing import ClassVar, Dict
 
 from pyterraformer.core.generics import Backend
 
@@ -8,7 +8,7 @@ from pyterraformer.core.generics import Backend
 class BaseBackend:
     SECRET_FIELDS: ClassVar = []
 
-    def generate_environment(self) -> Dict:
+    def generate_environment(self) -> dict:
         return {}
 
     def as_object(self) -> Backend:

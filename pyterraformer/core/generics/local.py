@@ -7,9 +7,7 @@ class Local(TerraformObject):
         for key, value in attributes.items():
             pass_on.append([key, value])
 
-        TerraformObject.__init__(
-            self, _type="local", original_text=text, attributes=pass_on
-        )
+        TerraformObject.__init__(self, _type="local", original_text=text, attributes=pass_on)
 
     # def render(self, variables=None):
     #     from analytics_terraformer_core.utility import clean_render_dictionary

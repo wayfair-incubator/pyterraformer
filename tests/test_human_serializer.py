@@ -10,16 +10,16 @@ def test_human_serialization():
     hs = HumanSerializer()
     example_string = """resource "aws_s3_bucket" "b" {
       bucket = "my-tf-test-bucket"
-    
+
       tags = {
         Name        = "My bucket"
         Environment = "Dev"
       }
     }
-    
+
     resource "aws_s3_bucket" "b2" {
       bucket = "my-tf-test-bucket"
-    
+
       tags = {
         Name        = "My bucket"
         Environment = "Dev"
@@ -32,7 +32,7 @@ def test_human_serialization():
 
     test_string = """resource "aws_s3_bucket" "b" {
       bucket = "my-updated-bucket"
-    
+
       tags = {
         Name        = "My bucket"
         Environment = "Prod"
@@ -45,7 +45,6 @@ def test_human_serialization():
 
 
 def test_block_parsing(human_serializer):
-
     split = """terraform {
   backend "local" {
 
@@ -91,7 +90,6 @@ def test_block_parsing(human_serializer):
 
 
 def test_block_parsing_variants(human_serializer):
-
     split = """terraform {
   backend "local" {
 
@@ -136,7 +134,6 @@ def test_block_parsing_variants(human_serializer):
 
 
 def test_comments(human_serializer):
-
     split = """resource "google_container_cluster" "primary" {
   name     = "my-gke-cluster"
   location = "us-central1"
@@ -187,6 +184,4 @@ MULTILINE
     rendered = human_serializer.render_object(resource)
     assert "# maintain position" in rendered
     assert "# this is a helpful comment" in rendered
-    assert rendered.find("# maintain position") < rendered.find(
-        "# this is a helpful comment"
-    )
+    assert rendered.find("# maintain position") < rendered.find("# this is a helpful comment")

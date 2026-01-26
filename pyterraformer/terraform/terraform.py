@@ -1,8 +1,9 @@
 import os
 import re
 from dataclasses import dataclass, field
-from subprocess import CalledProcessError, run as sub_run
-from typing import Optional, List, Union
+from subprocess import CalledProcessError
+from subprocess import run as sub_run
+from typing import List, Optional, Union
 
 from pyterraformer.constants import logger
 from pyterraformer.settings import get_default_terraform_location
@@ -11,22 +12,17 @@ from pyterraformer.terraform.backends import BaseBackend, LocalBackend
 
 @dataclass
 class Terraform:
-    terraform_exec_path: Optional[str] = field(
-        default_factory=get_default_terraform_location
-    )
-    plugin_cache_directory: Optional[str] = None
+    terraform_exec_path: str | None = field(default_factory=get_default_terraform_location)
+    plugin_cache_directory: str | None = None
     backend: BaseBackend = field(default_factory=lambda: LocalBackend(path=os.getcwd()))
     workspace: str = "default"
 
-    def run(self, arguments: Union[str, List[str]], path: str):
+    def run(self, arguments: str | list[str], path: str):
         workspace = self._run(["workspace", "show"], path=path).strip()
         logger.info(f"Executing {arguments} in workspace {workspace}.")
         if workspace != self.workspace:
             logger.info(f"swapping to configured workspace {workspace}")
-            workspaces = [
-                v.replace("*", "").strip()
-                for v in self._run(["workspace", "list"], path=path).split("\n")
-            ]
+            workspaces = [v.replace("*", "").strip() for v in self._run(["workspace", "list"], path=path).split("\n")]
             if self.workspace in workspaces:
                 logger.info("workspace found, swapping to")
                 self._run(["workspace", "select", self.workspace], path=path)
@@ -36,7 +32,7 @@ class Terraform:
         self._run(["init"], path=path)
         return self._run(arguments=arguments, path=path)
 
-    def _run(self, arguments: Union[str, List[str]], path: str):
+    def _run(self, arguments: str | list[str], path: str):
         if not self.terraform_exec_path:
             raise ValueError("No terraform executable set, cannot run TF commands.")
         runtime_env = os.environ.copy()
@@ -54,7 +50,7 @@ class Terraform:
         if self.plugin_cache_directory:
             runtime_env["TF_PLUGIN_CACHE_DIR"] = self.plugin_cache_directory
 
-        cmd_array: List[str] = [self.terraform_exec_path, *arguments]
+        cmd_array: list[str] = [self.terraform_exec_path, *arguments]
 
         def run_cmd():
             return sub_run(
@@ -74,7 +70,5 @@ class Terraform:
 
 
 def extract_errors(input: str):
-    found = re.findall(
-        r"(Error:.*)(?:Error:|$)", input, re.IGNORECASE | re.MULTILINE | re.DOTALL
-    )
+    found = re.findall(r"(Error:.*)(?:Error:|$)", input, re.IGNORECASE | re.MULTILINE | re.DOTALL)
     return "\n".join(found).strip()
