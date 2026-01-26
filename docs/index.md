@@ -1,4 +1,4 @@
-# Pyterraformer - 0.1.0
+# Pyterraformer - 0.2.0
 
 [![CI pipeline status](https://github.com/wayfair-incubator/pyterraformer/workflows/CI/badge.svg?branch=main)][ci]
 [![PyPI](https://img.shields.io/pypi/v/pyterraformer)](https://pypi.org/project/pyterraformer/)
