@@ -1,27 +1,27 @@
 import os
 from pathlib import Path
-from typing import Dict, List, Union, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Union
 
+from pyterraformer.core.utility import value_match
 from pyterraformer.enums import InsertPosition
 from pyterraformer.serializer import BaseSerializer
-from pyterraformer.core.utility import value_match
 
 if TYPE_CHECKING:
-    from pyterraformer.core.workspace import TerraformWorkspace
     from pyterraformer.core import TerraformObject
+    from pyterraformer.core.workspace import TerraformWorkspace
 
 
-class TerraformNamespace(object):
+class TerraformNamespace:
     def __init__(
         self,
         name: str,
         workspace: "TerraformWorkspace",
-        objects: Optional[List["TerraformObject"]] = None,
+        objects: list["TerraformObject"] | None = None,
     ):
-        self.workspace: "TerraformWorkspace" = workspace
+        self.workspace: TerraformWorkspace = workspace
         self.name = name
-        self.objects: List = objects or []
-        self.locals: Dict = {}
+        self.objects: list = objects or []
+        self.locals: dict = {}
 
     def resolve(self):
         """No op for the base file"""
@@ -29,10 +29,8 @@ class TerraformNamespace(object):
 
 
 class LazyFile(TerraformNamespace):
-    def __init__(self, file: Union[str, Path], workspace: "TerraformWorkspace"):
-        super().__init__(
-            name=os.path.basename(file).replace(".tf", ""), workspace=workspace
-        )
+    def __init__(self, file: str | Path, workspace: "TerraformWorkspace"):
+        super().__init__(name=os.path.basename(file).replace(".tf", ""), workspace=workspace)
         self.file = file
 
     def resolve(self) -> "TerraformFile":
@@ -46,8 +44,8 @@ class TerraformFile(TerraformNamespace):
         self,
         workspace: "TerraformWorkspace",
         text: str,
-        location: Union[str, Path],
-        objects: Optional[List["TerraformObject"]] = None,
+        location: str | Path,
+        objects: list["TerraformObject"] | None = None,
     ):
         self._text = text
         name = os.path.basename(location)
@@ -58,16 +56,9 @@ class TerraformFile(TerraformNamespace):
 
     def get_object(self, **kwargs):
         for object in self.objects:
-            if all(
-                [
-                    value_match(getattr(object, key, None), val)
-                    for key, val in kwargs.items()
-                ]
-            ):
+            if all(value_match(getattr(object, key, None), val) for key, val in kwargs.items()):
                 return object
-        raise ValueError(
-            f"No object matching filter criteria {kwargs} found in file {self.location}"
-        )
+        raise ValueError(f"No object matching filter criteria {kwargs} found in file {self.location}")
 
     def delete_object(self, object):
         orig = self.objects
@@ -83,28 +74,25 @@ class TerraformFile(TerraformNamespace):
             return reversed(output)
         return output
 
-    def _detect_duplicates(self, object) -> List:
-        from pyterraformer.core.resources import ResourceObject
+    def _detect_duplicates(self, object) -> list:
+        from pyterraformer.core.generics import Data, Variable
         from pyterraformer.core.modules import ModuleObject
-        from pyterraformer.core.generics import Variable, Data
+        from pyterraformer.core.resources import ResourceObject
 
         duplicates = []
-        if isinstance(object, (Variable, Data)):
+        if isinstance(object, Variable | Data):
             duplicates = [
                 idx
                 for idx, obj in enumerate(self.objects)
-                if isinstance(object, (Variable, Data))
-                and object.name == getattr(obj, "name", "")
+                if isinstance(object, Variable | Data) and object.name == getattr(obj, "name", "")
             ]
         elif isinstance(object, ResourceObject):
-
             duplicates = [
                 idx
                 for idx, obj in enumerate(self.objects)
                 if isinstance(object, ResourceObject)
                 and object.tf_id
-                and object.tf_id + (object._type or "")
-                == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
+                and object.tf_id + (object._type or "") == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
             ]
         elif isinstance(object, ModuleObject):
             duplicates = [
@@ -112,15 +100,14 @@ class TerraformFile(TerraformNamespace):
                 for idx, obj in enumerate(self.objects)
                 if isinstance(object, ModuleObject)
                 and object.tf_id
-                and object.tf_id + (object._type or "")
-                == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
+                and object.tf_id + (object._type or "") == getattr(obj, "tf_id", "") + getattr(obj, "_type", "")
             ]
         return duplicates
 
     def add_object(
         self,
         object: "TerraformObject",
-        position: Union[InsertPosition, int] = InsertPosition.DEFAULT,
+        position: InsertPosition | int = InsertPosition.DEFAULT,
         exists_okay: bool = False,
         replace: bool = False,
     ):
@@ -128,11 +115,7 @@ class TerraformFile(TerraformNamespace):
         duplicates = self._detect_duplicates(object)
         if duplicates:
             if replace:
-                self.objects = [
-                    obj
-                    for idx, obj in enumerate(self.objects)
-                    if idx not in (duplicates)
-                ]
+                self.objects = [obj for idx, obj in enumerate(self.objects) if idx not in (duplicates)]
             elif exists_okay:
                 return
             else:
@@ -145,9 +128,7 @@ class TerraformFile(TerraformNamespace):
         elif position == InsertPosition.LAST:
             self.objects.append(object)
         elif position == InsertPosition.DEFAULT:
-            indexes = [
-                idx for idx, val in enumerate(self.objects) if val._type == object._type
-            ]
+            indexes = [idx for idx, val in enumerate(self.objects) if val._type == object._type]
             if indexes:
                 self.objects.insert(indexes[-1] + 1, object)
             else:

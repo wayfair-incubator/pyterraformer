@@ -20,7 +20,7 @@ StringLit
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Optional, List, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, List, Optional
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformFile
@@ -60,7 +60,7 @@ def variable_helper(arg, workspace, file, parent, parent_instance):
 
 class FileLookupInstantiator(Resolvable):
     def __init__(self, workspace: "TerraformWorkspace"):
-        for key, file in workspace.files.items():
+        for _key, file in workspace.files.items():
             for object in file.objects:
                 if hasattr(object, "tf_id"):
                     setattr(self, object.tf_id, object)
@@ -86,11 +86,7 @@ class FileObjectLookupInstantiator(Resolvable):
 
     def __getattr__(self, item):
         return FileObjectSubClassLookupInstantiator(
-            [
-                obj
-                for obj in self.objects
-                if hasattr(obj, "_type") and obj._type == str(item)
-            ]
+            [obj for obj in self.objects if hasattr(obj, "_type") and obj._type == str(item)]
         )
 
 
@@ -111,11 +107,7 @@ class DataLookupInstantiator(Resolvable):
 
     def __getattr__(self, item):
         return DataSubClassLookupInstantiator(
-            [
-                obj
-                for obj in self.workspace.data
-                if hasattr(obj, "type") and obj.type == str(item)
-            ]
+            [obj for obj in self.workspace.data if hasattr(obj, "type") and obj.type == str(item)]
         )
 
 
@@ -226,22 +218,21 @@ class ArrayLookup(Resolvable):
 
 
 class PropertyLookup(Resolvable):
-    def __init__(self, base, attributes: List):
+    def __init__(self, base, attributes: list):
         self.base = base
         self.contents = attributes
         self.property = attributes[0]
 
     def __repr__(self):
-        return "{}.{}".format(self.base.__repr__(), self.property.__repr__())
+        return f"{self.base.__repr__()}.{self.property.__repr__()}"
 
     def resolve(
         self,
         workspace: "TerraformWorkspace",
         file: "TerraformFile",
-        parent: Optional[Resolvable] = None,
-        parent_instance: Optional[Resolvable] = None,
+        parent: Resolvable | None = None,
+        parent_instance: Resolvable | None = None,
     ):
-
         anchor = parent or self.base
         if self.base == "module":
             anchor = FileLookupInstantiator(workspace)
@@ -261,11 +252,9 @@ class PropertyLookup(Resolvable):
         # in either case, pull out the base value and look that up immediately
         # then pass forward
 
-        if isinstance(self.property, (DictLookup, PropertyLookup)):
+        if isinstance(self.property, DictLookup | PropertyLookup):
             local_resolved = getattr(anchor, str(self.property.base))
-            return self.property.resolve(
-                workspace, file, parent=local_resolved, parent_instance=self
-            )
+            return self.property.resolve(workspace, file, parent=local_resolved, parent_instance=self)
         else:
             try:
                 return getattr(anchor, str(self.property))
@@ -274,7 +263,7 @@ class PropertyLookup(Resolvable):
 
 
 class StringLit(Resolvable):
-    def __init__(self, contents: List):
+    def __init__(self, contents: list):
         self.contents = contents
 
     @property
@@ -328,9 +317,7 @@ class String(Resolvable):
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         if isinstance(parent_instance, PropertyLookup):
-            resolved = PropertyLookup(self.item).resolve(
-                workspace, file, parent, parent_instance
-            )
+            resolved = PropertyLookup(self.item).resolve(workspace, file, parent, parent_instance)
             return resolved
         return self.item
 
@@ -340,13 +327,11 @@ class File(Resolvable):
         self.item = item[0] if isinstance(item, list) else item
 
     def __repr__(self):
-        return "file({})".format(self.item.__repr__())
+        return f"file({self.item.__repr__()})"
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         if isinstance(parent_instance, PropertyLookup):
-            resolved = PropertyLookup(self.item).resolve(
-                workspace, file, parent, parent_instance
-            )
+            resolved = PropertyLookup(self.item).resolve(workspace, file, parent, parent_instance)
             out = resolved
         else:
             out = self.item
@@ -364,16 +349,14 @@ class Concat(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(
-                    workspace, file, parent, parent_instance
-                )
+                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
                 out = resolved
             elif isinstance(item, Resolvable):
                 out = item.resolve(workspace, file, None, None)
             else:
                 out = item
             final.append(out)
-        if all([isinstance(item, str) for item in final]):
+        if all(isinstance(item, str) for item in final):
             concat = "".join(final)
         else:
             concat = []
@@ -413,9 +396,7 @@ class Replace(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(
-                    workspace, file, parent, parent_instance
-                )
+                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
                 out = resolved
             else:
                 out = item
@@ -430,17 +411,13 @@ class GenericFunction(Resolvable):
         self.items = items[1:]
 
     def __repr__(self):
-        return "{}({})".format(
-            self.name, ",".join([item.__repr__() for item in self.items])
-        )
+        return "{}({})".format(self.name, ",".join([item.__repr__() for item in self.items]))
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(
-                    workspace, file, parent, parent_instance
-                )
+                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
                 out = resolved
             else:
                 out = item
@@ -460,9 +437,7 @@ class Merge(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(item).resolve(
-                    workspace, file, parent, parent_instance
-                )
+                resolved = PropertyLookup(item).resolve(workspace, file, parent, parent_instance)
                 out = resolved
             else:
                 out = item
@@ -535,9 +510,7 @@ class BinaryOp(Resolvable):
         left = all[0]
         operator, right = all[1]
         if isinstance(parent_instance, PropertyLookup):
-            left = PropertyLookup(left).resolve(
-                workspace, file, parent, parent_instance
-            )
+            left = PropertyLookup(left).resolve(workspace, file, parent, parent_instance)
         if operator == "==":
             return left == right
         elif operator == ">=":
@@ -571,9 +544,7 @@ class BinaryTerm(Resolvable):
         return "".join([val.__repr__() for val in self.args])
 
     def resolve(self, workspace, file, parent=None, parent_instance=None):
-        return [
-            item.resolve(workspace, file, parent, parent_instance) for item in self.args
-        ]
+        return [item.resolve(workspace, file, parent, parent_instance) for item in self.args]
 
 
 class Boolean(Resolvable):
@@ -678,9 +649,7 @@ class ToSet(Resolvable):
         final = []
         for item in self.items:
             if isinstance(parent_instance, PropertyLookup):
-                resolved = PropertyLookup(parent_instance, item).resolve(
-                    workspace, file, parent, parent_instance
-                )
+                resolved = PropertyLookup(parent_instance, item).resolve(workspace, file, parent, parent_instance)
                 out = resolved
             else:
                 out = item

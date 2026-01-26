@@ -1,11 +1,12 @@
 import os
+from collections.abc import Iterator
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterator, List, Union
+from typing import List, Union
 
 
 def splitall(path: str) -> Iterator[str]:
-    out: List[str] = []
+    out: list[str] = []
     while True:
         base, end = os.path.split(path)
         if base and end:
@@ -17,7 +18,7 @@ def splitall(path: str) -> Iterator[str]:
     return reversed(out)
 
 
-def get_root(path: str, breaker: Union[str, List[str]] = None):
+def get_root(path: str, breaker: str | list[str] | None = None):
     if isinstance(breaker, str):
         breaker = [breaker]
     elif not breaker:

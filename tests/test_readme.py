@@ -1,5 +1,6 @@
-from pyterraformer.exceptions import TerraformExecutionError
 import pytest
+
+from pyterraformer.exceptions import TerraformExecutionError
 
 
 def test_readme():
@@ -9,7 +10,7 @@ def test_readme():
 
     example_string: str = """resource "aws_s3_bucket" "b" {
       bucket = "my-tf-test-bucket"
-      
+
       tags = {
     Name        = "My bucket"
         Environment = "Dev"
@@ -29,4 +30,4 @@ def test_readme():
     # and write the modified namespace back
     # formatting requires a valid terraform binary to be provided
     with pytest.raises(TerraformExecutionError):
-        updated = hs.render_object(bucket, format=True)
+        hs.render_object(bucket, format=True)

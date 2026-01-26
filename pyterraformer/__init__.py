@@ -1,7 +1,4 @@
-try:
-    from importlib.metadata import PackageNotFoundError, version
-except ImportError:
-    from importlib_metadata import PackageNotFoundError, version  # type: ignore
+from importlib.metadata import PackageNotFoundError, version
 
 from .config import Config
 from .core.workspace import TerraformWorkspace

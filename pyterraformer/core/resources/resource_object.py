@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from pyterraformer.core.objects import TerraformObject, ObjectMetadata
+from pyterraformer.core.objects import ObjectMetadata, TerraformObject
 
 
 @dataclass
@@ -11,14 +11,12 @@ class StateResponse:
 
 
 class ResourceObject(TerraformObject):
-    REQUIRED_ATTRIBUTES: List[str] = []
-    PRIORITY_ATTRIBUTES: List[str] = []
-    BLOCK_ATTRIBUTES: List[str] = []
+    REQUIRED_ATTRIBUTES: list[str] = []
+    PRIORITY_ATTRIBUTES: list[str] = []
+    BLOCK_ATTRIBUTES: list[str] = []
     _type = "generic_resource_object"
 
-    def __init__(
-        self, tf_id: str, _metadata: Optional[ObjectMetadata] = None, **kwargs
-    ):
+    def __init__(self, tf_id: str, _metadata: ObjectMetadata | None = None, **kwargs):
         TerraformObject.__init__(self, self._type, tf_id, _metadata=_metadata, **kwargs)
 
     def render_attribute(self, item):

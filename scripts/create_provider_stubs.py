@@ -2,11 +2,11 @@
 
 import json
 import os
-from logging import DEBUG
-from logging import StreamHandler
+from logging import DEBUG, StreamHandler
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Dict, List, Optional
 
+import click
 from jinja2 import Template
 
 from pyterraformer import HumanSerializer
@@ -14,7 +14,6 @@ from pyterraformer.constants import logger
 from pyterraformer.core import TerraformWorkspace
 from pyterraformer.terraform import Terraform
 from pyterraformer.terraform.backends.local_backend import LocalBackend
-import click
 
 logger.addHandler(StreamHandler())
 logger.setLevel(DEBUG)
@@ -25,19 +24,19 @@ TEMPLATE = Template(
 {%- filter indent(width=indent) %}
 {%- for key, block in blocks.items()  %}
 {%- if block.nesting_mode == 'single' %}
-@dataclass 
+@dataclass
 class {{block.camel_case}}():
     {{ render_blocks(block.blocks, 4) }}
     {%- for item in block.attributes %}{% if not item.optional and not item.computed %}
     {{item.name}}:{{ item.python_type }}{% endif %}{% endfor %}
     # non-optional-blocks
-    
+
     {%- for key, item in block.blocks.items() %}{% if not item.optional and not item.computed %}
     {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
-    
+
     {%- for item in block.attributes %}{% if item.optional %}
     {{item.name}}: {{item.python_type}} = EMPTY_DEFAULT{% endif %}{% endfor %}
-    
+
     {%- for key, item  in block.blocks.items() %}{% if item.optional %}
     {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
     pass
@@ -45,40 +44,40 @@ class {{block.camel_case}}():
 {%- if block.nesting_mode == 'list' %}
 # wrapper list class
 class {{block.camel_case}}(BlockList):
-    @dataclass 
+    @dataclass
     class {{block.camel_case}}Item():
 {{ render_blocks(block.blocks, 8) }}
         {%- for item in block.attributes %}{% if not item.optional and not item.computed %}
         {{item.name}}:{{ item.python_type }}{% endif %}{% endfor %}
         # non-optional-blocks
-        
+
         {%- for key, item in block.blocks.items() %}{% if not item.optional and not item.computed %}
         {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
-        
+
         {%- for item in block.attributes %}{% if item.optional %}
         {{item.name}}: Optional[{{item.python_type}}] = EMPTY_DEFAULT{% endif %}{% endfor %}
-        
+
         {%- for key, item  in block.blocks.items() %}{% if item.optional %}
         {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
         pass
     items: List[{{block.camel_case}}Item]
 {% endif %}
-{% if block.nesting_mode == 'set' %}      
+{% if block.nesting_mode == 'set' %}
 # wrapper set class
 class {{block.camel_case}}(BlockSet):
-    @dataclass 
+    @dataclass
     class {{block.camel_case}}Item():
 {{ render_blocks(block.blocks, 8) }}
         {%- for item in block.attributes %}{% if not item.optional and not item.computed %}
         {{item.name}}:{{ item.python_type }}{% endif %}{% endfor %}
         # non-optional-blocks
-        
+
         {%- for key, item in block.blocks.items() %}{% if not item.optional and not item.computed %}
         {{item.snake_case}}:{{item.camel_case}}{% endif %}{% endfor %}
-        
+
         {%- for item in block.attributes %}{% if item.optional %}
         {{item.name}}: Optional[{{item.python_type}}] = EMPTY_DEFAULT{% endif %}{% endfor %}
-        
+
         {%- for key, item  in block.blocks.items() %}{% if item.optional %}
         {{item.snake_case}}: Optional[{{item.camel_case}}]=EMPTY_DEFAULT{% endif %}{% endfor %}
         pass
@@ -98,7 +97,7 @@ from dataclasses import dataclass
 
 
 class {{resource.camel_case}}(ResourceObject):
-    """    
+    """
     Args:
     {%- for item in resource.attributes %}{% if not item.computed and not item.optional %}
         {{item.name}} ({{ item.python_type }}): {% filter indent(width=20) %}{{item.description}}{% endfilter %}{% endif %}{% endfor %}
@@ -106,24 +105,24 @@ class {{resource.camel_case}}(ResourceObject):
         {{item.snake_case}}: Optional[{{item.camel_case}}]{% endif %}{% endfor %}
     """
     _type = '{{resource.snake_case}}'
-    
+
 {{ render_blocks(blocks, 4) }}
-    
+
     def __init__(self,
         tf_id: str,
-        
+
         {%- for item in resource.attributes %}{% if not item.optional and not item.computed %}
         {{item.name}}:{{ item.python_type }},{% endif %}{% endfor %}
         # non-optional-blocks
-        
+
         {%- for key, item  in blocks.items() %}{% if not item.optional and not item.computed %}
         {{item.snake_case}}:{{item.camel_case}},{% endif %}{% endfor %}
         #optional
         _metadata: Optional[ObjectMetadata] = EMPTY_DEFAULT,
-        
+
         {%- for item in resource.attributes %}{% if item.optional %}
         {{item.name}}: {{item.python_type}} = EMPTY_DEFAULT,{% endif %}{% endfor %}
-        
+
         {%- for key, item  in blocks.items() %}{% if item.optional %}
         {{item.snake_case}}: Optional[{{item.camel_case}}]=None,{% endif %}{% endfor %}
         ):
@@ -135,9 +134,9 @@ class {{resource.camel_case}}(ResourceObject):
                 kwargs['{{item.snake_case}}'] = {{ item.snake_case }}
             {% endfor %}
             super().__init__(tf_id=tf_id, _metadata=_metadata, **kwargs)
-            
-        
-        
+
+
+
 
 '''
 )
@@ -163,7 +162,7 @@ def python_type(tf_type: str) -> str:
         type = python_type([v for v in tf_type if v != "set"][0])
         return f"Set[{type}]"
     elif "object" in tf_type:
-        components = python_type([v for v in tf_type if v != "object"][0])
+        python_type([v for v in tf_type if v != "object"][0])
         return "Dict[str,Any]"
     return tf_type
 
@@ -174,8 +173,8 @@ class Attribute:
     type: str
     optional: bool
     computed: bool
-    description: Optional[str] = None
-    default: Optional[str] = None
+    description: str | None = None
+    default: str | None = None
 
     @property
     def python_type(self) -> str:
@@ -187,8 +186,8 @@ class Attribute:
 @dataclass
 class Resource:
     snake_case: str
-    description: Optional[str]
-    attributes: List[Attribute]
+    description: str | None
+    attributes: list[Attribute]
 
     @property
     def camel_case(self):
@@ -208,9 +207,7 @@ class Resource:
             for key, v in info["block"]["attributes"].items()
         ]
         # move optional attributes to the end
-        attributes = sorted(
-            attributes, key=lambda x: "zzz" + x.name if x.optional else x.name
-        )
+        attributes = sorted(attributes, key=lambda x: "zzz" + x.name if x.optional else x.name)
         return Resource(key, description=info.get("description"), attributes=attributes)
 
 
@@ -248,11 +245,11 @@ def generate_blocks(schema: dict, depth=0) -> dict:
 class Block:
     snake_case: str
     optional: bool
-    attributes: List[Attribute]
-    description: Optional[str]
+    attributes: list[Attribute]
+    description: str | None
     nesting_mode: str
     max_items: int = -1
-    blocks: [Optional[Dict[str, "Block"]]] = field(default_factory=dict)
+    blocks: [dict[str, "Block"] | None] = field(default_factory=dict)
 
     def __post_init__(self):
         # all lists can be empty
@@ -269,20 +266,14 @@ class Block:
 def build_resource_class(key: str, schema: dict):
     blocks = generate_blocks(schema)
     # blocks = sorted(blocks, key= lambda x: not x.blocks)
-    class_text = TEMPLATE.render(
-        resource=Resource.parse_from_resource_info(key, schema), blocks=blocks
-    )
+    class_text = TEMPLATE.render(resource=Resource.parse_from_resource_info(key, schema), blocks=blocks)
     return class_text
 
 
 def _create_stubs(provider: str, version: str, output_path: str, terraform_path: str):
     output = {}
-    tf = Terraform(
-        terraform_exec_path=terraform_path, backend=LocalBackend(path=os.getcwd())
-    )
-    workspace = TerraformWorkspace(
-        terraform=tf, path=os.getcwd(), serializer=HumanSerializer(terraform=tf)
-    )
+    tf = Terraform(terraform_exec_path=terraform_path, backend=LocalBackend(path=os.getcwd()))
+    workspace = TerraformWorkspace(terraform=tf, path=os.getcwd(), serializer=HumanSerializer(terraform=tf))
     workspace.add_provider(name="build", source=provider, version=version)
     workspace.save_all()
     tf.run("init", path=os.getcwd())
@@ -302,7 +293,7 @@ def _create_stubs(provider: str, version: str, output_path: str, terraform_path:
 
 def save_stubs(provider: str, version: str, stubs: dict, path: str):
     base_path = Path(path)
-    root = Path(path) / provider / f"v{version.replace('.','_')}"
+    root = Path(path) / provider / f"v{version.replace('.', '_')}"
     os.makedirs(root, exist_ok=True)
     for key, text in stubs.items():
         if not text:
@@ -324,9 +315,7 @@ def save_stubs(provider: str, version: str, stubs: dict, path: str):
 
 
 @click.command()
-@click.option(
-    "--provider", help="The provider name, eg. hashicorp/aws to create stubs for"
-)
+@click.option("--provider", help="The provider name, eg. hashicorp/aws to create stubs for")
 @click.option("--version", help="The version of the provider to create stubs for. ")
 @click.option("--terraform_path", help="The path of the local terraform binary.")
 @click.option("--output_path", help="The output path to put the created files in")

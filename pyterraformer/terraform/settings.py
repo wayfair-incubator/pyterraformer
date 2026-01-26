@@ -2,5 +2,5 @@ from dataclasses import dataclass
 
 
 @dataclass
-class TerraformConfig(object):
+class TerraformConfig:
     terraform_exec_path: str

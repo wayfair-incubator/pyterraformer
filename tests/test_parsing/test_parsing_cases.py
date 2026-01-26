@@ -1,7 +1,6 @@
-from pathlib import Path
 import os
-from logging import DEBUG
-from logging import StreamHandler
+from logging import DEBUG, StreamHandler
+from pathlib import Path
 
 from pyterraformer import HumanSerializer
 from pyterraformer.constants import logger
@@ -16,9 +15,7 @@ logger.setLevel(DEBUG)
 def test_all_parsing():
     test_cases = Path(__file__).parent / "cases"
     tf = Terraform(terraform_exec_path=None, backend=LocalBackend(path=test_cases))
-    workspace = TerraformWorkspace(
-        terraform=tf, path=test_cases, serializer=HumanSerializer(terraform=tf)
-    )
+    workspace = TerraformWorkspace(terraform=tf, path=test_cases, serializer=HumanSerializer(terraform=tf))
 
     all_files = os.listdir(test_cases)
     for file in all_files:

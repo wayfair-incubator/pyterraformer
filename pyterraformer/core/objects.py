@@ -1,8 +1,7 @@
 from dataclasses import dataclass
-from typing import Dict, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional
 
 from pyterraformer.exceptions import ValidationError
-
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformNamespace
@@ -10,28 +9,25 @@ if TYPE_CHECKING:
 
 @dataclass
 class ObjectMetadata:
-    source_file: Optional[str] = None
-    orig_text: Optional[str] = None
-    row_num: Optional[int] = None
-    start_pos: Optional[int] = None
-    end_pos: Optional[int] = None
+    source_file: str | None = None
+    orig_text: str | None = None
+    row_num: int | None = None
+    start_pos: int | None = None
+    end_pos: int | None = None
 
 
-class TerraformObject(object):
+class TerraformObject:
     def __init__(
         self,
         _type,
-        tf_id: Optional[str] = None,
-        _metadata: Optional[ObjectMetadata] = None,
+        tf_id: str | None = None,
+        _metadata: ObjectMetadata | None = None,
         **kwargs,
     ):
-
         self._metadata = _metadata or ObjectMetadata()
         self.tf_id = tf_id
         arguments = kwargs or {}
-        self.render_variables: Dict[str, str] = {
-            str(key): value for key, value in arguments.items()
-        }
+        self.render_variables: dict[str, str] = {str(key): value for key, value in arguments.items()}
         # for attribute in self.attributes:
         #     if isinstance(attribute, list):
         #         # always cast keys to string
@@ -43,17 +39,11 @@ class TerraformObject(object):
         self._type: str = _type
         self._changed: bool = False
         self._workspace = None
-        self._file: Optional["TerraformNamespace"] = None
+        self._file: TerraformNamespace | None = None
         self._initialized: bool = True
 
     def __repr__(self):
-        return (
-            f"{self._type}("
-            + ", ".join(
-                [f'{key}="{val}"' for key, val in self.render_variables.items()]
-            )
-            + ")"
-        )
+        return f"{self._type}(" + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()]) + ")"
 
     @property
     def tf_attributes(self):
@@ -86,13 +76,10 @@ class TerraformObject(object):
         So skip anything with a private method, or in the disallow list...
         Unless it's also in the list of things that we should render."""
         if name.startswith("_") or (
-            name in ("row_num", "template", "name", "tf_id")
-            and not (self.render_variables and name in self.render_variables)
+            name in ("row_num", "template", "name", "tf_id") and not (self.render_variables and name in self.render_variables)
         ):
             super().__setattr__(name, value)
-        elif (self.render_variables and name in self.render_variables) or getattr(
-            self, "_initialized", False
-        ):
+        elif (self.render_variables and name in self.render_variables) or getattr(self, "_initialized", False):
             self._changed = True
             self.__dict__.get("render_variables")[name] = value
         else:
@@ -119,14 +106,11 @@ class TerraformObject(object):
         elif isinstance(item, int):
             resolved = item
         elif isinstance(item, dict):
-            resolved = {
-                self.resolve_item(key): self.resolve_item(value)
-                for key, value in item.items()
-            }
+            resolved = {self.resolve_item(key): self.resolve_item(value) for key, value in item.items()}
         else:
             resolved = item.resolve(self._workspace, self._file, None, None)
         if isinstance(resolved, Variable) and hasattr(resolved, "default"):
-            resolved = getattr(resolved, "default")
+            resolved = resolved.default
         return resolved
 
     @property

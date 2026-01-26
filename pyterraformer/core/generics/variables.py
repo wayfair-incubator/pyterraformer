@@ -1,5 +1,6 @@
-from pyterraformer.core.objects import TerraformObject
 from typing import TYPE_CHECKING
+
+from pyterraformer.core.objects import TerraformObject
 
 if TYPE_CHECKING:
     from pyterraformer.core.generics import Literal
@@ -13,15 +14,12 @@ class Variable(TerraformObject):
     def __repr__(self):
         return (
             f"{self._type}(name={self.name}, "
-            + ", ".join(
-                [f'{key}="{val}"' for key, val in self.render_variables.items()]
-            )
+            + ", ".join([f'{key}="{val}"' for key, val in self.render_variables.items()])
             + ")"
         )
 
     def __getitem__(self, val):
         for key, item in self.default.items():
-
             if val == key:
                 return item
         raise KeyError(val)
@@ -41,15 +39,15 @@ class Variable(TerraformObject):
 
         return Literal(f"var.{self.name}")
 
-    def get(self, val, fallback: str = None):
+    def get(self, val, fallback: str | None = None):
         for key, item in self.default.items():
             if val == key:
                 return item
         return fallback
 
     def get_type(self, val) -> "Literal":
-        from pyterraformer.core.generics.interpolation import String
         from pyterraformer.core.generics import Literal, StringLit
+        from pyterraformer.core.generics.interpolation import String
 
         if isinstance(val, list):
             if not val:
