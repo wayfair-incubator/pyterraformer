@@ -52,7 +52,7 @@ class Terraform:
         cmd_array: list[str] = [self.terraform_exec_path, *arguments]
 
         def run_cmd():
-            return sub_run(
+            return sub_run(  # noqa: S603
                 cmd_array,
                 cwd=path,
                 env=runtime_env,

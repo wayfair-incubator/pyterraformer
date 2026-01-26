@@ -18,6 +18,8 @@ StringLit
             PropertyLookup -> Resolve Left to Right
 """
 
+from __future__ import annotations
+
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
@@ -59,7 +61,7 @@ def variable_helper(arg, workspace, file, parent, parent_instance):
 
 
 class FileLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         for _key, file in workspace.files.items():
             for object in file.objects:
                 if hasattr(object, "tf_id"):
@@ -69,7 +71,7 @@ class FileLookupInstantiator(Resolvable):
 
 
 class FileObjectLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         # TODO: 2022-06-05 figure out how to do this bette
         from pyterraformer.core.namespace import LazyFile
 
@@ -102,7 +104,7 @@ class FileObjectSubClassLookupInstantiator(Resolvable):
 
 
 class DataLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         self.workspace = workspace
 
     def __getattr__(self, item):
@@ -120,13 +122,13 @@ class DataSubClassLookupInstantiator(Resolvable):
 
 
 class VariableLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         for key, value in workspace.variables.items():
             setattr(self, key, value)
 
 
 class TerraformLookupInstantiator(Resolvable):
-    def __init__(self, workspace: "TerraformWorkspace"):
+    def __init__(self, workspace: TerraformWorkspace):
         if workspace.terraform:
             self.workspace = workspace.terraform.workspace
         else:
@@ -134,7 +136,7 @@ class TerraformLookupInstantiator(Resolvable):
 
 
 class LocalLookupInstantiator(Resolvable):
-    def __init__(self, file: "TerraformFile"):
+    def __init__(self, file: TerraformFile):
         for key, value in file.locals.items():
             setattr(self, key, value)
 
@@ -228,8 +230,8 @@ class PropertyLookup(Resolvable):
 
     def resolve(
         self,
-        workspace: "TerraformWorkspace",
-        file: "TerraformFile",
+        workspace: TerraformWorkspace,
+        file: TerraformFile,
         parent: Resolvable | None = None,
         parent_instance: Resolvable | None = None,
     ):

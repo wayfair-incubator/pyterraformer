@@ -12,7 +12,7 @@ def get_default_terraform_location() -> str | None:
     cmd = ["where", "terraform"] if system() == "Windows" else ["which", "terraform"]
 
     try:
-        output = run(cmd, check=True, capture_output=True, encoding="utf-8")
+        output = run(cmd, check=True, capture_output=True, encoding="utf-8")  # noqa: S603
         if output.stdout:
             # where may return multiple lines
             output_str = output.stdout.split("\n")[0].strip()

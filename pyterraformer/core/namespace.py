@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -15,8 +17,8 @@ class TerraformNamespace:
     def __init__(
         self,
         name: str,
-        workspace: "TerraformWorkspace",
-        objects: list["TerraformObject"] | None = None,
+        workspace: TerraformWorkspace,
+        objects: list[TerraformObject] | None = None,
     ):
         self.workspace: TerraformWorkspace = workspace
         self.name = name
@@ -29,11 +31,11 @@ class TerraformNamespace:
 
 
 class LazyFile(TerraformNamespace):
-    def __init__(self, file: str | Path, workspace: "TerraformWorkspace"):
+    def __init__(self, file: str | Path, workspace: TerraformWorkspace):
         super().__init__(name=os.path.basename(file).replace(".tf", ""), workspace=workspace)
         self.file = file
 
-    def resolve(self) -> "TerraformFile":
+    def resolve(self) -> TerraformFile:
         if not self.workspace.serializer:
             raise ValueError("No parser provided to look at files in this workspace")
         return self.workspace.serializer.parse_file(self.file, workspace=self.workspace)
@@ -42,10 +44,10 @@ class LazyFile(TerraformNamespace):
 class TerraformFile(TerraformNamespace):
     def __init__(
         self,
-        workspace: "TerraformWorkspace",
+        workspace: TerraformWorkspace,
         text: str,
         location: str | Path,
-        objects: list["TerraformObject"] | None = None,
+        objects: list[TerraformObject] | None = None,
     ):
         self._text = text
         name = os.path.basename(location)
@@ -106,7 +108,7 @@ class TerraformFile(TerraformNamespace):
 
     def add_object(
         self,
-        object: "TerraformObject",
+        object: TerraformObject,
         position: InsertPosition | int = InsertPosition.DEFAULT,
         exists_okay: bool = False,
         replace: bool = False,
@@ -164,4 +166,4 @@ class TerraformFile(TerraformNamespace):
 
         except IndexError:
             self._idx = 0
-            raise StopIteration  # Done iterating.
+            raise StopIteration from None  # Done iterating.
