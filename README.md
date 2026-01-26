@@ -140,7 +140,7 @@ if __name__ == "__main__":
 
 ## Next Steps
 
-Read the [documentation](https://pyterraformer.readthedocs.io/en/latest/) to discover more, including how to work with
+Explore the examples above and the source code to discover more, including how to work with
 directories, files, apply terraform directly, and get IDE auto-completion for your favorite providers.
 
 ## Project Maturity
@@ -175,7 +175,7 @@ from pyterraformer.providers.hashicorp.aws import aws_s3_bucket
 
 ## Documentation
 
-Primary documentation is on [Read the Docs](https://pyterraformer.readthedocs.io/en/latest/)
+Documentation is available in this repository. See the examples in this README and explore the source code in the `pyterraformer/` directory.
 
 ## Roadmap
 
