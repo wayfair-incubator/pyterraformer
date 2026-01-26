@@ -21,17 +21,12 @@ if TYPE_CHECKING:
 def process_attribute(input: Any, level=0):
     from pyterraformer.core.generics import Variable
 
-    # if isinstance(input, Block):
-    #     input = {input.name: input._keys}
-
     if not isinstance(input, dict):
         return input
     output: dict[str, Any] = {}
     for key, item in input.items():
         if isinstance(item, Variable):
             output[key] = item.render_basic()
-        # elif isinstance(item, StringLit):
-        #     output[key] = item.__repr__()
         elif isinstance(item, Literal):
             output[key] = item
         elif isinstance(item, BlockList):

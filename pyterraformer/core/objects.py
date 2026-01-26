@@ -28,14 +28,6 @@ class TerraformObject:
         self.tf_id = tf_id
         arguments = kwargs or {}
         self.render_variables: dict[str, str] = {str(key): value for key, value in arguments.items()}
-        # for attribute in self.attributes:
-        #     if isinstance(attribute, list):
-        #         # always cast keys to string
-        #         self.render_variables[str(attribute[0])] = attribute[1]
-        #     elif isinstance(attribute, Block):
-        #         base = self.render_variables.get(attribute.name, Block())
-        #         base.append(attribute)
-        #         self.render_variables[attribute.name] = base
         self._type: str = _type
         self._changed: bool = False
         self._workspace = None
