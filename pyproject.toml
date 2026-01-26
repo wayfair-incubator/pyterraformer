@@ -106,6 +106,7 @@ ignore = [
     "E402",   # module level import not at top of file - needed for template strings
     "SIM101", # multiple isinstance calls - keep for readability
     "SIM108", # ternary operator - keep if-else for readability
+    "SIM114", # combine if branches - keep for readability
     "SIM118", # key in dict.keys() - keep for clarity
 ]
 
