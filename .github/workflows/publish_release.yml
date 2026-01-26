@@ -1,0 +1,65 @@
+name: Publish Release
+
+env:
+  PYTHON_VERSION: "3.12"
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  update_docs_for_version_bump:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+        with:
+          requirements: "true"
+          test-requirements: "true"
+          docs-requirements: "true"
+
+      - name: Push documentation changes
+        uses: ./.github/actions/publish-docs-with-mike
+        with:
+          new_version: true
+
+  build-distributions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+
+      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Build wheel
+        uses: ./.github/actions/build-dist
+
+      - name: Upload distribution artifacts
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        with:
+          name: distributions
+          path: ./dist
+
+  publish-to-pypi:
+    runs-on: ubuntu-latest
+    environment: "Publish Release"
+    permissions:
+      id-token: write
+    needs: ["build-distributions"]
+    steps:
+      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
+        with:
+            name: distributions
+            path: ./dist
+
+      - name: Publish distribution 📦 to PyPI
+        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0

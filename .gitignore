@@ -17,3 +17,17 @@ __pycache__/
 .terraform.lock.hcl
 
 /scripts/local_execution.py
+
+# macOS
+.DS_Store
+
+# Coverage
+htmlcov/
+.coverage
+*.xml
+
+# pytest
+.pytest_cache/
+
+# mypy
+.mypy_cache/
