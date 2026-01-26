@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyterraformer"
-version = "0.1.0"
+version = "0.2.0"
 description = "Enjoyable terraform manipulation from python."
 readme = "README.md"
 license = {text = "MIT"}

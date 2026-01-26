@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.2.0] - 2026-01-26
+
+### Changed
+- Modernized type annotations using `from __future__ import annotations` (PEP 563)
+- Removed string quotes from type annotations (now lazily evaluated)
+- Fixed ruff style issues (B904, SIM101, SIM108, SIM114, SIM118) instead of suppressing them
+- Simplified pyproject.toml ruff configuration with per-file ignores
+- Improved exception handling with proper `raise ... from err` chaining
+
+### Removed
+- ~150 lines of commented-out/dead code across the codebase
+- Unused imports and TODO comments
+- Global ruff ignore rules (moved to targeted per-file exceptions)
+
 ## [0.1.0] - 2026-01-26
 
 ### Added
