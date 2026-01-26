@@ -63,13 +63,11 @@ class Variable(TerraformObject):
             return Literal("map(any)")
         elif isinstance(val, set):
             return Literal(f"set({self.get_type(next(iter(val))).value})")
-        elif isinstance(val, str):
-            return Literal("string")
-        elif isinstance(val, StringLit):
+        elif isinstance(val, (str, StringLit)):
             return Literal("string")
         elif isinstance(val, bool):
             return Literal("bool")
-        elif isinstance(val, int) or isinstance(val, float):
+        elif isinstance(val, (int, float)):
             return Literal("number")
         elif isinstance(val, String):
             return Literal("string")

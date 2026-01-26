@@ -20,7 +20,7 @@ StringLit
 
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformFile

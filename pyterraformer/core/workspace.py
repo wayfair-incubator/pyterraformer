@@ -3,7 +3,7 @@ from collections import defaultdict
 from fnmatch import fnmatch
 from os.path import dirname
 from pathlib import Path, PurePath
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Union
 
 from pyterraformer.constants import logger
 from pyterraformer.core.generics import BlockList, Literal

@@ -98,16 +98,11 @@ ignore = [
     "E501",   # line too long (handled by formatter)
     "S101",   # assert used (acceptable in tests)
     "S603",   # subprocess call - false positive for trusted input
-    "F401",   # unused imports (in __init__.py files)
     "F811",   # redefinition of unused name
     "C901",   # too complex
     "UP035",  # deprecated typing imports (Dict, List, etc.) - keep for compatibility
     "B904",   # raise from in except clause - not critical
     "E402",   # module level import not at top of file - needed for template strings
-    "SIM101", # multiple isinstance calls - keep for readability
-    "SIM108", # ternary operator - keep if-else for readability
-    "SIM114", # combine if branches - keep for readability
-    "SIM118", # key in dict.keys() - keep for clarity
 ]
 
 [tool.ruff.lint.per-file-ignores]

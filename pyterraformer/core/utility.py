@@ -2,7 +2,6 @@ import os
 from collections.abc import Iterator
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import List, Union
 
 
 def splitall(path: str) -> Iterator[str]:

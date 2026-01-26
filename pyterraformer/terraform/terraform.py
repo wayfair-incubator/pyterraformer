@@ -3,7 +3,6 @@ import re
 from dataclasses import dataclass, field
 from subprocess import CalledProcessError
 from subprocess import run as sub_run
-from typing import List, Optional, Union
 
 from pyterraformer.constants import logger
 from pyterraformer.settings import get_default_terraform_location

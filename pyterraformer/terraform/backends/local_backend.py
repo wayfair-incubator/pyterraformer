@@ -1,7 +1,6 @@
 import atexit
 from dataclasses import dataclass
 from tempfile import TemporaryDirectory
-from typing import Dict, Optional
 
 from pyterraformer.core.generics import Backend
 from pyterraformer.terraform.backends.base_backend import BaseBackend

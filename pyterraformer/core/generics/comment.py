@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pyterraformer.core.objects import ObjectMetadata, TerraformObject
 
 
@@ -11,10 +9,7 @@ class Comment(TerraformObject):
         _metadata: ObjectMetadata | None = None,
     ):
         self.multiline = multiline
-        if self.multiline:
-            text = f"/*{text}*/"
-        else:
-            text = text.strip()
+        text = f"/*{text}*/" if self.multiline else text.strip()
         TerraformObject.__init__(self, "comment", tf_id=None, text=text, _metadata=_metadata)
 
     @property

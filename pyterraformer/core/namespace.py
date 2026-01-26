@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, List, Optional, Union
+from typing import TYPE_CHECKING
 
 from pyterraformer.core.utility import value_match
 from pyterraformer.enums import InsertPosition

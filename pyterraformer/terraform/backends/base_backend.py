@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import ClassVar, Dict
+from typing import ClassVar
 
 from pyterraformer.core.generics import Backend
 

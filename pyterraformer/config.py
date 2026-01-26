@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional
 
 from pyterraformer.settings import get_default_terraform_location
 

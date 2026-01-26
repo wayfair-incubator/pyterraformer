@@ -1,5 +1,3 @@
-from typing import List
-
 from pyterraformer.core.generics import Literal
 from pyterraformer.core.objects import TerraformObject
 

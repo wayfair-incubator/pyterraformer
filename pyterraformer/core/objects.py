@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, Optional
-
-from pyterraformer.exceptions import ValidationError
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyterraformer.core.namespace import TerraformNamespace
@@ -101,9 +99,7 @@ class TerraformObject:
 
         if isinstance(item, list):
             resolved = [self.resolve_item(sub_item) for sub_item in item]
-        elif isinstance(item, str):
-            resolved = item
-        elif isinstance(item, int):
+        elif isinstance(item, (str, int)):
             resolved = item
         elif isinstance(item, dict):
             resolved = {self.resolve_item(key): self.resolve_item(value) for key, value in item.items()}

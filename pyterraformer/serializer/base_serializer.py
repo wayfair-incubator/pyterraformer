@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Dict, Optional, Union
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from pyterraformer.core import (

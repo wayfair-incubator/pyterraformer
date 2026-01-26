@@ -1,6 +1,5 @@
 # from analytics_utility_core.decorators import lazy_property
 
-from typing import Optional
 
 from pyterraformer.core.objects import ObjectMetadata, TerraformObject
 
